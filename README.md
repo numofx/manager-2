@@ -1,86 +1,58 @@
 # Yield Protocol Vault v2
 
-The Yield Protocol Vault v2 is a Collateralized Debt Engine for zero-coupon bonds, loosely integrated with [YieldSpace Automated Market Makers](https://yield.is/Yield.pdf), as described by Dan Robinson and Allan Niemerg.
+Collateralized Debt Engine for zero-coupon bonds integrated with [YieldSpace AMMs](https://yield.is/Yield.pdf).
 
-## Smart Contracts
+## Core Contracts
 
-A longer description of the smart contracts can be found in the [Yield v2 reference](https://docs.google.com/document/d/1WBrJx_5wxK1a4N_9b6IQV70d2TyyyFxpiTfjA6PuZaQ/edit).
+- **Cauldron**: Accounting ledger for vaults and debt positions
+- **Ladle**: User gateway for all protocol interactions
+- **Witch**: Liquidation engine
+- **Join**: Asset storage (ERC20/ERC721)
+- **FYToken**: Zero-coupon bonds redeemable at maturity
+- **Oracles**: Price feeds for spot prices, borrow/lend rates
 
-### Oracles
-Oracles return spot prices, borrowing rates and lending rates for the assets in the protocol.
+Full reference: [Yield v2 docs](https://docs.google.com/document/d/1WBrJx_5wxK1a4N_9b6IQV70d2TyyyFxpiTfjA6PuZaQ/edit)
 
-### Join
-Joins store assets, such as ERC20 or ERC721 tokens.
+## Celo Deployment
 
-### FYToken
-FYTokens are ERC20 tokens that are redeemable at maturity for their underlying asset, at an amount that starts at 1 and increases with the lending rate (`chi`).
+Deployed with **cKES** (Kenyan Shilling) and **USDT** support via Mento oracles.
 
-### Cauldron
-The Cauldron is responsible for the accounting in the Yield Protocol. Vaults are created to contain borrowing positions of one collateral asset type against one fyToken series. The debt in a given vault increases with the borrowing rate (`rate`) after maturity of the associated fyToken series.
+**Quick Deploy:**
+```bash
+# Setup
+cp .env.example .env
+# Add PRIVATE_KEY and CELO_RPC to .env
 
-When the value of the collateral in a vault falls below the value of the borrowed fyToken, the vault can be liquidated.
+# Test on Alfajores first
+forge script script/DeployCelo.s.sol:DeployCelo \
+  --rpc-url https://alfajores-forno.celo-testnet.org \
+  --broadcast --verify
 
-### Ladle
-The Ladle is the gateway for all Cauldron integrations, and all asset movements in and out of the Joins (except fyToken redemptions). To implement certain features the Ladle integrates with YieldSpace Pools.
-
-[Ladle recipe cookbook](https://docs.google.com/document/d/1-r9g99aZfGLd1Aa3FRxBXLybgfGzAZIuHWwufF-I8Js).
-
-### Wand
-The Wand bundles function calls into governance actions.
-
-### Witch
-The Witch is the liquidation engine for the Yield Protocol Vault v2.
-
-## Warning
-This code is provided as-is, with no guarantees of any kind.
-
-### Pre Requisites
-Before running any command, make sure to install dependencies:
-
-```
-$ yarn
+# After testing, deploy to mainnet
+forge script script/DeployCelo.s.sol:DeployCelo \
+  --rpc-url $CELO_RPC --broadcast --verify --slow
 ```
 
-### Lint Solidity
-Lint the Solidity code:
+**Key Addresses (Celo):**
+- cKES: `0x456a3D042C0DbD3db53D5489e98dFb038553B0d0`
+- USDT: `0x48065fbBE25f71C9282ddf5e1cD6D6A887483D5e`
+- Mento SortedOracles: `0xefB84935239dAcdecF7c5bA76d8dE40b077B7b33`
 
-```
-$ yarn lint:sol
-```
+**Critical:** Test on Alfajores testnet before mainnet. Start with conservative debt limits.
 
-### Lint TypeScript
-Lint the TypeScript code:
+## Development
 
-```
-$ yarn lint:ts
-```
-
-### Coverage
-Generate the code coverage report:
-
-```
-$ yarn coverage
+```bash
+yarn                    # Install dependencies
+forge build            # Compile
+forge test             # Run tests
+yarn lint:sol          # Lint Solidity
 ```
 
-### Test
-Be sure to have an `.env` file located at `packages/foundry` with the value `MAINNET_RPC=<your rpc url>` to be used for forked tests.
+## Security
 
-Compile and test the smart contracts with [Foundry](https://getfoundry.sh/):
-
-```
-$ cd packages/foundry
-$ forge test
-```
-
-Additional tests can be run with Hardhat using npm or yarn:
-
-```
-$ cd packages/hardhat
-$ npm run hardhat:test
-```
-
-## Bug Bounty
-Yield is offering bounties for bugs disclosed to us at [security@yield.is](mailto:security@yield.is). The bounty reward is up to $500,000, depending on severity. Please include full details of the vulnerability and steps/code to reproduce. We ask that you permit us time to review and remediate any findings before public disclosure.
+Bug bounty up to $500k at [security@yield.is](mailto:security@yield.is)
 
 ## License
-All files in this repository are released under the [GPLv3](https://github.com/yieldprotocol/fyDai/blob/master/LICENSE.md) license.
+
+[GPLv3](LICENSE.md)
