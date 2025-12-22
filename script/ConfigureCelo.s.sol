@@ -9,7 +9,6 @@ import "../src/Witch.sol";
 import "../src/oracles/mento/MentoSpotOracle.sol";
 import "../src/oracles/chainlink/ChainlinkMultiOracle.sol";
 import "@yield-protocol/utils-v2/src/token/IERC20Metadata.sol";
-import "@yield-protocol/utils-v2/src/access/AccessControl.sol";
 
 /**
  * @title ConfigureCelo
@@ -68,6 +67,7 @@ contract ConfigureCelo is Script {
 
     function run() external {
         uint256 adminPrivateKey = vm.envUint("PRIVATE_KEY");
+        address admin = vm.addr(adminPrivateKey);
 
         // Load deployed contract addresses from environment
         Cauldron cauldron = Cauldron(vm.envAddress("CAULDRON_ADDRESS"));
@@ -87,14 +87,31 @@ contract ConfigureCelo is Script {
         console.log("Ladle:", address(ladle));
         console.log("Witch:", address(witch));
         console.log("MentoOracle:", address(mentoOracle));
+        console.log("Admin:", admin);
         console.log("");
 
         vm.startBroadcast(adminPrivateKey);
 
         // ============================================================
-        // Step 1: Grant Permissions
+        // Step 1: Grant Admin Permissions to Broadcaster EOA
         // ============================================================
-        console.log("1. Granting permissions...");
+        console.log("1. Granting admin permissions to broadcaster...");
+
+        // Grant governance function permissions to admin EOA
+        cauldron.grantRole(Cauldron.addAsset.selector, admin);
+        cauldron.grantRole(Cauldron.setSpotOracle.selector, admin);
+        cauldron.grantRole(Cauldron.setDebtLimits.selector, admin);
+        ladle.grantRole(Ladle.addJoin.selector, admin);
+        mentoOracle.grantRole(MentoSpotOracle.setSource.selector, admin);
+        mentoOracle.grantRole(MentoSpotOracle.setBounds.selector, admin);
+
+        console.log("   [OK] Admin permissions granted to broadcaster");
+        console.log("");
+
+        // ============================================================
+        // Step 2: Grant Permissions to Protocol Contracts
+        // ============================================================
+        console.log("2. Granting permissions to protocol contracts...");
 
         // Ladle needs comprehensive permissions on Cauldron
         console.log("   Granting Ladle permissions on Cauldron...");
@@ -114,26 +131,26 @@ contract ConfigureCelo is Script {
 
         // Ladle needs permissions on all Joins
         console.log("   Granting Ladle permissions on Joins...");
-        AccessControl(address(ckesJoin)).grantRole(IJoin.join.selector, address(ladle));
-        AccessControl(address(ckesJoin)).grantRole(IJoin.exit.selector, address(ladle));
-        AccessControl(address(usdtJoin)).grantRole(IJoin.join.selector, address(ladle));
-        AccessControl(address(usdtJoin)).grantRole(IJoin.exit.selector, address(ladle));
-        AccessControl(address(celoJoin)).grantRole(IJoin.join.selector, address(ladle));
-        AccessControl(address(celoJoin)).grantRole(IJoin.exit.selector, address(ladle));
+        Join(address(ckesJoin)).grantRole(IJoin.join.selector, address(ladle));
+        Join(address(ckesJoin)).grantRole(IJoin.exit.selector, address(ladle));
+        Join(address(usdtJoin)).grantRole(IJoin.join.selector, address(ladle));
+        Join(address(usdtJoin)).grantRole(IJoin.exit.selector, address(ladle));
+        Join(address(celoJoin)).grantRole(IJoin.join.selector, address(ladle));
+        Join(address(celoJoin)).grantRole(IJoin.exit.selector, address(ladle));
 
         // Witch needs exit permissions on all Joins for liquidations
         console.log("   Granting Witch permissions on Joins...");
-        AccessControl(address(ckesJoin)).grantRole(IJoin.exit.selector, address(witch));
-        AccessControl(address(usdtJoin)).grantRole(IJoin.exit.selector, address(witch));
-        AccessControl(address(celoJoin)).grantRole(IJoin.exit.selector, address(witch));
+        Join(address(ckesJoin)).grantRole(IJoin.exit.selector, address(witch));
+        Join(address(usdtJoin)).grantRole(IJoin.exit.selector, address(witch));
+        Join(address(celoJoin)).grantRole(IJoin.exit.selector, address(witch));
 
-        console.log("   [OK] Permissions granted");
+        console.log("   [OK] Protocol permissions granted");
         console.log("");
 
         // ============================================================
-        // Step 2: Add Assets to Cauldron
+        // Step 3: Add Assets to Cauldron
         // ============================================================
-        console.log("2. Adding assets to Cauldron...");
+        console.log("3. Adding assets to Cauldron...");
         cauldron.addAsset(CKES_ID, CKES);
         console.log("   [OK] Added cKES");
         cauldron.addAsset(USDT_ID, USDT);
@@ -143,36 +160,31 @@ contract ConfigureCelo is Script {
         console.log("");
 
         // ============================================================
-        // Step 3: Register Joins with Ladle
+        // Step 4: Register Joins with Ladle
         // ============================================================
-        console.log("3. Registering Joins with Ladle...");
-        ladle.addJoin(CKES_ID, address(ckesJoin));
+        console.log("4. Registering Joins with Ladle...");
+        ladle.addJoin(CKES_ID, IJoin(address(ckesJoin)));
         console.log("   [OK] Registered cKES Join");
-        ladle.addJoin(USDT_ID, address(usdtJoin));
+        ladle.addJoin(USDT_ID, IJoin(address(usdtJoin)));
         console.log("   [OK] Registered USDT Join");
-        ladle.addJoin(CELO_ID, address(celoJoin));
+        ladle.addJoin(CELO_ID, IJoin(address(celoJoin)));
         console.log("   [OK] Registered CELO Join");
         console.log("");
 
         // ============================================================
-        // Step 4: Configure Mento Oracle for cKES/USD
+        // Step 5: Configure Mento Oracle for cKES/USD
         // ============================================================
-        console.log("4. Configuring Mento Oracle...");
+        console.log("5. Configuring Mento Oracle...");
 
-        // Set cKES/USD price source from Mento
+        // Set cKES/USD price source from Mento (maxAge is set here)
         console.log("   Setting cKES/USD source (Mento KES/USD feed)...");
         mentoOracle.setSource(
             CKES_ID,
-            IERC20Metadata(CKES),
             USDT_ID,  // Using USDT as USD proxy
-            IERC20Metadata(USDT),
             MENTO_KES_USD_FEED,
-            false  // Not inverse: Mento returns USD per KES
+            CKES_MAX_AGE  // Max age: 1 hour
         );
-
-        // Set staleness check for cKES/USD
-        console.log("   Setting cKES/USD staleness check (max age: 1 hour)...");
-        mentoOracle.setMaxAge(CKES_ID, USDT_ID, CKES_MAX_AGE);
+        console.log("   [OK] Set cKES/USD source with staleness check (max age: 1 hour)");
 
         // Set sanity bounds for cKES/USD
         console.log("   Setting cKES/USD sanity bounds ($0.005 - $0.015)...");
@@ -182,9 +194,9 @@ contract ConfigureCelo is Script {
         console.log("");
 
         // ============================================================
-        // Step 5: Set Spot Oracles in Cauldron
+        // Step 6: Set Spot Oracles in Cauldron
         // ============================================================
-        console.log("5. Setting spot oracles in Cauldron...");
+        console.log("6. Setting spot oracles in Cauldron...");
 
         // Set cKES/USDT spot oracle (for cKES collateral, USDT base)
         console.log("   Setting cKES/USDT spot oracle (200% ratio)...");
@@ -200,9 +212,9 @@ contract ConfigureCelo is Script {
         console.log("");
 
         // ============================================================
-        // Step 6: Set Debt Limits
+        // Step 7: Set Debt Limits
         // ============================================================
-        console.log("6. Setting debt limits...");
+        console.log("7. Setting debt limits...");
 
         // Set debt limits for USDT base with cKES collateral
         console.log("   Setting USDT/cKES debt limits (max: 10M USDT)...");
@@ -218,9 +230,9 @@ contract ConfigureCelo is Script {
         console.log("");
 
         // ============================================================
-        // Step 7: Configure Ilks (Approved Collateral)
+        // Step 8: Configure Ilks (Approved Collateral)
         // ============================================================
-        console.log("7. Adding approved collateral (ilks)...");
+        console.log("8. Adding approved collateral (ilks)...");
 
         // Note: addIlk is typically called when adding a series
         // This will be done when deploying FYTokens

@@ -10,17 +10,17 @@ import "../../interfaces/DataTypes.sol";
 library Mocks  {
     Vm public constant vm = Vm(address(bytes20(uint160(uint256(keccak256('hevm cheat code'))))));
 
-    function mock(string memory label) external returns (address mock_) {
+    function mock(string memory label) internal returns (address mock_) {
         mock_ = address(new StrictMock());
         vm.label(mock_, label);
     }
 
-    function lenientMock(string memory label) external returns (address mock_) {
+    function lenientMock(string memory label) internal returns (address mock_) {
         mock_ = address(new LenientMock());
         vm.label(mock_, label);
     }
 
-    function mockAt(address where, string memory label) external returns (address) {
+    function mockAt(address where, string memory label) internal returns (address) {
         vm.etch(where, vm.getCode("Mocks.sol:StrictMock"));
         vm.label(where, label);
         return where;

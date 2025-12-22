@@ -213,6 +213,10 @@ contract VerifyMentoFeedDirection {
         console2_log(string(abi.encodePacked(label, " ", value)));
     }
 
+    function _log(string memory part1, string memory part2, string memory part3) internal view {
+        console2_log(string(abi.encodePacked(part1, part2, part3)));
+    }
+
     // Minimal console interface for logging
     function console2_log(string memory message) internal view {
         // This will be handled by Foundry's console

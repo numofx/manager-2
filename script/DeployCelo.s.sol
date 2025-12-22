@@ -75,7 +75,7 @@ contract DeployCelo is Script {
         // Step 2: Deploy Ladle (User Gateway)
         // ============================================================
         console.log("2. Deploying Ladle...");
-        ladle = new Ladle(cauldron, IWETH9(WCELO));
+        ladle = new Ladle(ICauldron(address(cauldron)), IWETH9(WCELO));
         console.log("   Ladle deployed at:", address(ladle));
         console.log("");
 
@@ -83,7 +83,7 @@ contract DeployCelo is Script {
         // Step 3: Deploy Witch (Liquidation Engine)
         // ============================================================
         console.log("3. Deploying Witch...");
-        witch = new Witch(cauldron, ladle);
+        witch = new Witch(ICauldron(address(cauldron)), ILadle(address(ladle)));
         console.log("   Witch deployed at:", address(witch));
         console.log("");
 

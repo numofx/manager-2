@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 pragma solidity >=0.8.13;
 
+import "forge-std/src/Script.sol";
 import "../src/Cauldron.sol";
 import "../src/Ladle.sol";
 import "../src/Join.sol";
@@ -33,7 +34,7 @@ import "@yield-protocol/utils-v2/src/interfaces/IWETH9.sol";
  *     --broadcast \
  *     --verify
  */
-contract DeployMinimalCeloSystem {
+contract DeployMinimalCeloSystem is Script {
     // Celo mainnet addresses
     address constant WCELO = 0x471EcE3750Da237f93B8E339c536989b8978a438;
     address constant CKES = 0x456a3D042C0DbD3db53D5489e98dFb038553B0d0;
@@ -69,7 +70,10 @@ contract DeployMinimalCeloSystem {
     Join public usdtJoin;
 
     function run() external {
-        address deployer = msg.sender;
+        uint256 adminPrivateKey = vm.envUint("PRIVATE_KEY");
+        address admin = vm.addr(adminPrivateKey);
+
+        vm.startBroadcast(adminPrivateKey);
 
         // ============================================================
         // STEP 1: Deploy Core Contracts
@@ -79,10 +83,10 @@ contract DeployMinimalCeloSystem {
         cauldron = new Cauldron();
 
         // Deploy Ladle (user gateway)
-        ladle = new Ladle(cauldron, IWETH9(WCELO));
+        ladle = new Ladle(ICauldron(address(cauldron)), IWETH9(WCELO));
 
         // Deploy Witch (liquidation engine)
-        witch = new Witch(cauldron, ladle);
+        witch = new Witch(ICauldron(address(cauldron)), ILadle(address(ladle)));
 
         // ============================================================
         // STEP 2: Deploy Oracle
@@ -103,7 +107,7 @@ contract DeployMinimalCeloSystem {
         usdtJoin = new Join(USDT);
 
         // ============================================================
-        // STEP 4: Grant Permissions
+        // STEP 4: Grant Permissions to Protocol Contracts
         // ============================================================
 
         // Ladle needs permissions on Cauldron
@@ -121,17 +125,29 @@ contract DeployMinimalCeloSystem {
         cauldron.grantRole(Cauldron.slurp.selector, address(witch));
 
         // Ladle needs permissions on Joins
-        AccessControl(address(ckesJoin)).grantRole(IJoin.join.selector, address(ladle));
-        AccessControl(address(ckesJoin)).grantRole(IJoin.exit.selector, address(ladle));
-        AccessControl(address(usdtJoin)).grantRole(IJoin.join.selector, address(ladle));
-        AccessControl(address(usdtJoin)).grantRole(IJoin.exit.selector, address(ladle));
+        Join(address(ckesJoin)).grantRole(IJoin.join.selector, address(ladle));
+        Join(address(ckesJoin)).grantRole(IJoin.exit.selector, address(ladle));
+        Join(address(usdtJoin)).grantRole(IJoin.join.selector, address(ladle));
+        Join(address(usdtJoin)).grantRole(IJoin.exit.selector, address(ladle));
 
         // Witch needs permissions on Joins
-        AccessControl(address(ckesJoin)).grantRole(IJoin.exit.selector, address(witch));
-        AccessControl(address(usdtJoin)).grantRole(IJoin.exit.selector, address(witch));
+        Join(address(ckesJoin)).grantRole(IJoin.exit.selector, address(witch));
+        Join(address(usdtJoin)).grantRole(IJoin.exit.selector, address(witch));
 
         // ============================================================
-        // STEP 5: Add Assets to Cauldron
+        // STEP 5: Grant Admin Permissions to Broadcaster EOA
+        // ============================================================
+        // Required for governance calls made by this script
+
+        cauldron.grantRole(Cauldron.addAsset.selector, admin);
+        cauldron.grantRole(Cauldron.setSpotOracle.selector, admin);
+        cauldron.grantRole(Cauldron.setDebtLimits.selector, admin);
+        ladle.grantRole(Ladle.addJoin.selector, admin);
+        mentoOracle.grantRole(MentoSpotOracle.setSource.selector, admin);
+        mentoOracle.grantRole(MentoSpotOracle.setBounds.selector, admin);
+
+        // ============================================================
+        // STEP 6: Add Assets to Cauldron
         // ============================================================
 
         // cKES is the BASE asset (what you borrow/lend)
@@ -141,14 +157,14 @@ contract DeployMinimalCeloSystem {
         cauldron.addAsset(USDT_ID, USDT);
 
         // ============================================================
-        // STEP 6: Register Joins with Ladle
+        // STEP 7: Register Joins with Ladle
         // ============================================================
 
-        ladle.addJoin(CKES_ID, address(ckesJoin));
-        ladle.addJoin(USDT_ID, address(usdtJoin));
+        ladle.addJoin(CKES_ID, IJoin(address(ckesJoin)));
+        ladle.addJoin(USDT_ID, IJoin(address(usdtJoin)));
 
         // ============================================================
-        // STEP 7: Configure Oracle
+        // STEP 8: Configure Oracle
         // ============================================================
 
         // Set cKES/USDT source (returns cKES per USDT, 1e18)
@@ -178,7 +194,7 @@ contract DeployMinimalCeloSystem {
         );
 
         // ============================================================
-        // STEP 8: Set Debt Limits
+        // STEP 9: Set Debt Limits
         // ============================================================
 
         // Set max debt for cKES base with USDT collateral
@@ -189,6 +205,8 @@ contract DeployMinimalCeloSystem {
             MIN_DEBT,
             DEBT_DECIMALS
         );
+
+        vm.stopBroadcast();
 
         // ============================================================
         // Log Deployment Summary
