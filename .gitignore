@@ -31,3 +31,5 @@ crytic-export/
 
 # Foundry
 out/
+cache/
+broadcast/
