@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: BUSL-1.1
 pragma solidity >=0.8.13;
 
-import "erc3156/contracts/interfaces/IERC3156FlashBorrower.sol";
-import "erc3156/contracts/interfaces/IERC3156FlashLender.sol";
+import "ERC3156/interfaces/IERC3156FlashBorrower.sol";
+import "ERC3156/interfaces/IERC3156FlashLender.sol";
 import "./interfaces/IJoin.sol";
 import "./interfaces/IJoinFactory.sol";
 import "@yield-protocol/utils-v2/src/token/IERC20.sol";

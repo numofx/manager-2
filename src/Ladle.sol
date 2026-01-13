@@ -5,14 +5,14 @@ import "./interfaces/IJoin.sol";
 import "./interfaces/ICauldron.sol";
 import "./interfaces/IOracle.sol";
 import "./interfaces/DataTypes.sol";
-import "@yield-protocol/yieldspace-tv/src/interfaces/IPool.sol";
+import "yieldspace-tv/interfaces/IPool.sol";
 import "@yield-protocol/utils-v2/src/token/IERC20.sol";
 import "@yield-protocol/utils-v2/src/token/IERC2612.sol";
 import "@yield-protocol/utils-v2/src/access/AccessControl.sol";
 import "@yield-protocol/utils-v2/src/token/TransferHelper.sol";
 import "@yield-protocol/utils-v2/src/utils/Math.sol";
 import "@yield-protocol/utils-v2/src/utils/Cast.sol";
-import "dss-interfaces/src/dss/DaiAbstract.sol";
+import "dss-interfaces/dss/DaiAbstract.sol";
 import "./LadleStorage.sol";
 
 

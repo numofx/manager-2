@@ -1,6 +1,9 @@
 @yield-protocol/utils-v2/=lib/yieldspace-tv/lib/yield-utils-v2/
-@yield-protocol/yieldspace-tv/=lib/yieldspace-tv/
-forge-std/=lib/forge-std/
-erc3156/=lib/ERC3156/
-dss-interfaces/=lib/dss-interfaces/
-openzeppelin/=lib/openzeppelin-contracts/
+ERC3156/=lib/ERC3156/contracts/
+ds-test/=lib/forge-std/lib/ds-test/src/
+dss-interfaces/=lib/dss-interfaces/src/
+forge-std/=lib/forge-std/src/
+openzeppelin-contracts/=lib/openzeppelin-contracts/
+solmate/=lib/yieldspace-tv/lib/solmate/src/
+yield-utils-v2/=lib/yieldspace-tv/lib/yield-utils-v2/src/
+yieldspace-tv/=lib/yieldspace-tv/src/

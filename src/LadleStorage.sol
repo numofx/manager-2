@@ -2,7 +2,7 @@
 pragma solidity >=0.8.13;
 import "./interfaces/ICauldron.sol";
 import "./interfaces/IJoin.sol";
-import "@yield-protocol/yieldspace-tv/src/interfaces/IPool.sol";
+import "yieldspace-tv/interfaces/IPool.sol";
 import "@yield-protocol/utils-v2/src/interfaces/IWETH9.sol";
 import "./Router.sol";
 

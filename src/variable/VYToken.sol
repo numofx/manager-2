@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: BUSL-1.1
 pragma solidity >=0.8.13;
 
-import "erc3156/contracts/interfaces/IERC3156FlashBorrower.sol";
-import "erc3156/contracts/interfaces/IERC3156FlashLender.sol";
+import "ERC3156/interfaces/IERC3156FlashBorrower.sol";
+import "ERC3156/interfaces/IERC3156FlashLender.sol";
 import "@yield-protocol/utils-v2/src/token/ERC20Permit.sol";
 import "@yield-protocol/utils-v2/src/token/SafeERC20Namer.sol";
 import "@yield-protocol/utils-v2/src/access/AccessControl.sol";
@@ -11,7 +11,7 @@ import "@yield-protocol/utils-v2/src/utils/Cast.sol";
 import "../interfaces/IJoin.sol";
 import "../interfaces/IOracle.sol";
 import "../constants/Constants.sol";
-import { UUPSUpgradeable } from "openzeppelin/contracts/proxy/utils/UUPSUpgradeable.sol";
+import { UUPSUpgradeable } from "openzeppelin-contracts/contracts/proxy/utils/UUPSUpgradeable.sol";
 
 contract VYToken is IERC3156FlashLender, UUPSUpgradeable, AccessControl, ERC20Permit, Constants {
     using Math for uint256;

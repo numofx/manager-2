@@ -6,7 +6,7 @@ import "../interfaces/IOracle.sol";
 import "../interfaces/DataTypes.sol";
 import "../interfaces/IRouter.sol";
 import "./interfaces/IVRCauldron.sol";
-import "@yield-protocol/yieldspace-tv/src/interfaces/IPool.sol";
+import "yieldspace-tv/interfaces/IPool.sol";
 import "@yield-protocol/utils-v2/src/interfaces/IWETH9.sol";
 import "@yield-protocol/utils-v2/src/token/IERC20.sol";
 import "@yield-protocol/utils-v2/src/token/IERC2612.sol";
@@ -14,8 +14,8 @@ import "@yield-protocol/utils-v2/src/access/AccessControl.sol";
 import "@yield-protocol/utils-v2/src/token/TransferHelper.sol";
 import "@yield-protocol/utils-v2/src/utils/Math.sol";
 import "@yield-protocol/utils-v2/src/utils/Cast.sol";
-import "dss-interfaces/src/dss/DaiAbstract.sol";
-import { UUPSUpgradeable } from "openzeppelin/contracts/proxy/utils/UUPSUpgradeable.sol";
+import "dss-interfaces/dss/DaiAbstract.sol";
+import { UUPSUpgradeable } from "openzeppelin-contracts/contracts/proxy/utils/UUPSUpgradeable.sol";
 
 /// @dev Ladle orchestrates contract calls throughout the Yield Protocol v2 into useful and efficient user oriented features.
 contract VRLadle is UUPSUpgradeable, AccessControl() {

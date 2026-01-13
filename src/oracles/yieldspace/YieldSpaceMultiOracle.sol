@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: BUSL-1.1
 pragma solidity >=0.8.13;
 
-import "@yield-protocol/yieldspace-tv/src/interfaces/IPool.sol";
-import "@yield-protocol/yieldspace-tv/src/interfaces/IPoolOracle.sol";
+import "yieldspace-tv/interfaces/IPool.sol";
+import "yieldspace-tv/interfaces/IPoolOracle.sol";
 import "@yield-protocol/utils-v2/src/utils/Cast.sol";
 import "@yield-protocol/utils-v2/src/access/AccessControl.sol";
 import "../../interfaces/IOracle.sol";
