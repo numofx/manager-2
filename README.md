@@ -31,4 +31,30 @@ forge script script/DeployMinimalCeloSystem.s.sol:DeployMinimalCeloSystem \
  `0xb493ee06ee728f468b1d74fb2b335e42bb1b3e27
  (its asset() returns 0x48065fbBE25f71C9282ddf5e1cD6D6A887483D5e, the USDT token)`
 
+ ## Test workflow
+
+This repo separates **unit tests** from **mainnet fork tests**.
+
+### Unit tests (default, fast, no RPC)
+```bash
+make test
+```
+
+### Fork tests
+
+MAINNET_RPC=... make fork
+
+or put `MAINNET_RPC=...` in `.env` file and run `make fork`
+
+## Directory
+
+```
+test/
+  fork/        #requires MAINNET_RPC
+  oracles/
+  variable/
+  utils/
+  ...
+```
+
 
