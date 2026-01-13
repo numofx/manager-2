@@ -21,6 +21,7 @@ contract MentoSpotOracleBasicTest is Test {
 
     // Mento feed ID (from Celo mainnet)
     address public constant KES_USD_FEED = 0xbAcEE37d31b9f022Ef5d232B9fD53F05a531c169;
+    address public constant KES_USD_FEED_ALT = address(0xBEEF);
 
     // Test parameters
     uint256 public constant MAX_AGE = 3600; // 1 hour
@@ -35,11 +36,12 @@ contract MentoSpotOracleBasicTest is Test {
         oracle = new MentoSpotOracle(ISortedOracles(address(sortedOraclesMock)));
 
         // Grant permissions
+        oracle.grantRole(oracle.addSource.selector, address(this));
         oracle.grantRole(oracle.setSource.selector, address(this));
         oracle.grantRole(oracle.setBounds.selector, address(this));
 
         // Configure oracle source (maxAge is set here)
-        oracle.setSource(CKES_ID, USDT_ID, KES_USD_FEED, MAX_AGE);
+        oracle.addSource(CKES_ID, USDT_ID, KES_USD_FEED, MAX_AGE);
 
         // Set price bounds separately
         oracle.setBounds(CKES_ID, USDT_ID, MIN_PRICE, MAX_PRICE);
@@ -167,6 +169,32 @@ contract MentoSpotOracleBasicTest is Test {
             bytes32(USDT_ID),
             100e18
         );
+    }
+
+    /**
+     * @notice Test that setSource preserves existing sanity bounds
+     */
+    function testSetSourcePreservesBounds() public {
+        oracle.setSource(CKES_ID, USDT_ID, KES_USD_FEED_ALT, MAX_AGE);
+
+        (address rateFeedID, uint256 maxAge, uint256 minPrice, uint256 maxPrice) =
+            oracle.sources(CKES_ID, USDT_ID);
+
+        assertEq(rateFeedID, KES_USD_FEED_ALT, "Rate feed should update");
+        assertEq(maxAge, MAX_AGE, "Max age should update");
+        assertEq(minPrice, MIN_PRICE, "Min price should be preserved");
+        assertEq(maxPrice, MAX_PRICE, "Max price should be preserved");
+    }
+
+    function testSetSourceRevertsIfMissing() public {
+        bytes6 OTHER_BASE = bytes6("OTHER");
+        vm.expectRevert("Source not found");
+        oracle.setSource(OTHER_BASE, USDT_ID, KES_USD_FEED, MAX_AGE);
+    }
+
+    function testAddSourceRevertsIfExists() public {
+        vm.expectRevert("Source already set");
+        oracle.addSource(CKES_ID, USDT_ID, KES_USD_FEED, MAX_AGE);
     }
 
     /**

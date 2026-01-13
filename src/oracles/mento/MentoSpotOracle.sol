@@ -70,12 +70,41 @@ contract MentoSpotOracle is IOracle, AccessControl {
     }
 
     /**
-     * @notice Set or update a price source
+     * @notice Create a price source
      * @param baseId Yield protocol identifier for base asset (e.g., "cKES")
      * @param quoteId Yield protocol identifier for quote asset (e.g., "USDT")
      * @param rateFeedID Mento rate feed identifier (e.g., 0xbAcEE37d31b9f022Ef5d232B9fD53F05a531c169 for KES/USD)
      * @param maxAge Maximum age in seconds (e.g., 3600 for 1 hour)
-     * @dev This oracle will INVERT the Mento rate to return base-per-quote
+     * @dev This oracle will INVERT the Mento rate to return base-per-quote.
+     */
+    function addSource(
+        bytes6 baseId,
+        bytes6 quoteId,
+        address rateFeedID,
+        uint256 maxAge
+    ) external auth {
+        require(rateFeedID != address(0), "Invalid rateFeedID");
+        require(maxAge > 0, "maxAge must be > 0");
+        require(sources[baseId][quoteId].rateFeedID == address(0), "Source already set");
+
+        sources[baseId][quoteId] = Source({
+            rateFeedID: rateFeedID,
+            maxAge: maxAge,
+            minPrice: 0,    // No minimum bound by default
+            maxPrice: 0     // No maximum bound by default
+        });
+
+        emit SourceSet(baseId, quoteId, rateFeedID, maxAge);
+    }
+
+    /**
+     * @notice Update a price source
+     * @param baseId Yield protocol identifier for base asset (e.g., "cKES")
+     * @param quoteId Yield protocol identifier for quote asset (e.g., "USDT")
+     * @param rateFeedID Mento rate feed identifier (e.g., 0xbAcEE37d31b9f022Ef5d232B9fD53F05a531c169 for KES/USD)
+     * @param maxAge Maximum age in seconds (e.g., 3600 for 1 hour)
+     * @dev This oracle will INVERT the Mento rate to return base-per-quote.
+     *      Existing sanity bounds are preserved when updating a source.
      */
     function setSource(
         bytes6 baseId,
@@ -86,12 +115,10 @@ contract MentoSpotOracle is IOracle, AccessControl {
         require(rateFeedID != address(0), "Invalid rateFeedID");
         require(maxAge > 0, "maxAge must be > 0");
 
-        sources[baseId][quoteId] = Source({
-            rateFeedID: rateFeedID,
-            maxAge: maxAge,
-            minPrice: 0,    // No minimum bound by default
-            maxPrice: 0     // No maximum bound by default
-        });
+        Source storage existing = sources[baseId][quoteId];
+        require(existing.rateFeedID != address(0), "Source not found");
+        existing.rateFeedID = rateFeedID;
+        existing.maxAge = maxAge;
 
         emit SourceSet(baseId, quoteId, rateFeedID, maxAge);
     }

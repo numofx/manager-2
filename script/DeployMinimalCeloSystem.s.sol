@@ -143,6 +143,7 @@ contract DeployMinimalCeloSystem is Script {
         cauldron.grantRole(Cauldron.setSpotOracle.selector, admin);
         cauldron.grantRole(Cauldron.setDebtLimits.selector, admin);
         ladle.grantRole(Ladle.addJoin.selector, admin);
+        mentoOracle.grantRole(MentoSpotOracle.addSource.selector, admin);
         mentoOracle.grantRole(MentoSpotOracle.setSource.selector, admin);
         mentoOracle.grantRole(MentoSpotOracle.setBounds.selector, admin);
 
@@ -169,7 +170,7 @@ contract DeployMinimalCeloSystem is Script {
 
         // Set cKES/USDT source (returns cKES per USDT, 1e18)
         // Uses Mento KES/USD feed with INVERSION
-        mentoOracle.setSource(
+        mentoOracle.addSource(
             CKES_ID,              // base (cKES)
             USDT_ID,              // quote (USDT)
             MENTO_KES_USD_FEED,   // Mento feed (returns USD/KES, will be inverted)

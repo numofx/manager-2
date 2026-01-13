@@ -102,6 +102,7 @@ contract ConfigureCelo is Script {
         cauldron.grantRole(Cauldron.setSpotOracle.selector, admin);
         cauldron.grantRole(Cauldron.setDebtLimits.selector, admin);
         ladle.grantRole(Ladle.addJoin.selector, admin);
+        mentoOracle.grantRole(MentoSpotOracle.addSource.selector, admin);
         mentoOracle.grantRole(MentoSpotOracle.setSource.selector, admin);
         mentoOracle.grantRole(MentoSpotOracle.setBounds.selector, admin);
 
@@ -178,7 +179,7 @@ contract ConfigureCelo is Script {
 
         // Set cKES/USD price source from Mento (maxAge is set here)
         console.log("   Setting cKES/USD source (Mento KES/USD feed)...");
-        mentoOracle.setSource(
+        mentoOracle.addSource(
             CKES_ID,
             USDT_ID,  // Using USDT as USD proxy
             MENTO_KES_USD_FEED,
