@@ -33,3 +33,4 @@ crytic-export/
 out/
 cache/
 broadcast/
+cache/solidity-files-cache.json
