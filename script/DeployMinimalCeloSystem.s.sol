@@ -168,19 +168,19 @@ contract DeployMinimalCeloSystem is Script {
         // STEP 8: Configure Oracle
         // ============================================================
 
-        // Set cKES/USDT source (returns cKES per USDT, 1e18)
+        // Set USDT->cKES source (returns cKES per USDT, 1e18)
         // Uses Mento KES/USD feed with INVERSION
         mentoOracle.addSource(
-            CKES_ID,              // base (cKES)
-            USDT_ID,              // quote (USDT)
+            USDT_ID,              // base (USDT collateral)
+            CKES_ID,              // quote (cKES base asset)
             MENTO_KES_USD_FEED,   // Mento feed (returns USD/KES, will be inverted)
             MAX_AGE               // 3600 seconds staleness limit
         );
 
         // Set sanity bounds for inverted price (cKES per USD)
         mentoOracle.setBounds(
-            CKES_ID,              // base (cKES)
-            USDT_ID,              // quote (USDT)
+            USDT_ID,              // base (USDT collateral)
+            CKES_ID,              // quote (cKES base asset)
             MIN_PRICE,            // 66.67 cKES/USD min
             MAX_PRICE             // 200 cKES/USD max
         );

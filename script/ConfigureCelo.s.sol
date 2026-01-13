@@ -173,25 +173,25 @@ contract ConfigureCelo is Script {
         console.log("");
 
         // ============================================================
-        // Step 5: Configure Mento Oracle for cKES/USD
+        // Step 5: Configure Mento Oracle for USDT->cKES
         // ============================================================
         console.log("5. Configuring Mento Oracle...");
 
-        // Set cKES/USD price source from Mento (maxAge is set here)
-        console.log("   Setting cKES/USD source (Mento KES/USD feed)...");
+        // Set USDT->cKES price source from Mento (maxAge is set here)
+        console.log("   Setting USDT->cKES source (Mento KES/USD feed)...");
         mentoOracle.addSource(
-            CKES_ID,
             USDT_ID,  // Using USDT as USD proxy
+            CKES_ID,
             MENTO_KES_USD_FEED,
             CKES_MAX_AGE  // Max age: 1 hour
         );
-        console.log("   [OK] Set cKES/USD source with staleness check (max age: 1 hour)");
+        console.log("   [OK] Set USDT->cKES source with staleness check (max age: 1 hour)");
 
         // Set sanity bounds for cKES/USD
-        console.log("   Setting cKES/USD sanity bounds ($0.005 - $0.015)...");
-        mentoOracle.setBounds(CKES_ID, USDT_ID, CKES_MIN_PRICE, CKES_MAX_PRICE);
+        console.log("   Setting USDT->cKES sanity bounds ($0.005 - $0.015)...");
+        mentoOracle.setBounds(USDT_ID, CKES_ID, CKES_MIN_PRICE, CKES_MAX_PRICE);
 
-        console.log("   [OK] Mento Oracle configured for cKES/USD");
+        console.log("   [OK] Mento Oracle configured for USDT->cKES");
         console.log("");
 
         // ============================================================
@@ -199,8 +199,8 @@ contract ConfigureCelo is Script {
         // ============================================================
         console.log("6. Setting spot oracles in Cauldron...");
 
-        // Set cKES/USDT spot oracle (for cKES collateral, USDT base)
-        console.log("   Setting cKES/USDT spot oracle (200% ratio)...");
+        // Set USDT/cKES spot oracle (for cKES collateral, USDT base)
+        console.log("   Setting USDT/cKES spot oracle (200% ratio)...");
         cauldron.setSpotOracle(
             USDT_ID,              // base (what you borrow)
             CKES_ID,              // ilk (collateral)
@@ -260,7 +260,7 @@ contract ConfigureCelo is Script {
         console.log("  [OK] CELO (", WCELO, ")");
         console.log("");
         console.log("Oracles:");
-        console.log("  [OK] cKES/USD via Mento (KES/USD feed)");
+        console.log("  [OK] USDT->cKES via Mento (KES/USD feed)");
         console.log("    - Max age: 1 hour");
         console.log("    - Bounds: $0.005 - $0.015");
         console.log("    - Collateral ratio: 200%");

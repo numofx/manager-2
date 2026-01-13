@@ -41,14 +41,19 @@ contract MentoSpotOracleBasicTest is Test {
         oracle.grantRole(oracle.setBounds.selector, address(this));
 
         // Configure oracle source (maxAge is set here)
-        oracle.addSource(CKES_ID, USDT_ID, KES_USD_FEED, MAX_AGE);
+        oracle.addSource(USDT_ID, CKES_ID, KES_USD_FEED, MAX_AGE);
 
         // Set price bounds separately
-        oracle.setBounds(CKES_ID, USDT_ID, MIN_PRICE, MAX_PRICE);
+        oracle.setBounds(USDT_ID, CKES_ID, MIN_PRICE, MAX_PRICE);
 
         // Set initial rate: 7.757e21 / 1e24 = 0.007757 USD per KES
         // Inverted: 1e42 / 7.757e21 = 128.92e18 cKES per USD
         sortedOraclesMock.setMedianRate(KES_USD_FEED, 7.757e21);
+    }
+
+    function testSourceDirectionMatchesCauldronConvention() public {
+        (address feed,,,) = oracle.sources(USDT_ID, CKES_ID);
+        assertEq(feed, KES_USD_FEED, "Expected source at [USDT][cKES]");
     }
 
     // ========== Critical Staleness Bug Fix Tests ==========
@@ -63,8 +68,8 @@ contract MentoSpotOracleBasicTest is Test {
 
         // Should succeed with fresh timestamp
         (uint256 value, uint256 updateTime) = oracle.peek(
-            bytes32(CKES_ID),
             bytes32(USDT_ID),
+            bytes32(CKES_ID),
             100e18
         );
 
@@ -84,8 +89,8 @@ contract MentoSpotOracleBasicTest is Test {
         // Should revert with "Stale price"
         vm.expectRevert("Stale price");
         oracle.peek(
-            bytes32(CKES_ID),
             bytes32(USDT_ID),
+            bytes32(CKES_ID),
             100e18
         );
     }
@@ -102,8 +107,8 @@ contract MentoSpotOracleBasicTest is Test {
         // Should revert with "Future timestamp"
         vm.expectRevert("Future timestamp");
         oracle.peek(
-            bytes32(CKES_ID),
             bytes32(USDT_ID),
+            bytes32(CKES_ID),
             100e18
         );
     }
@@ -124,8 +129,8 @@ contract MentoSpotOracleBasicTest is Test {
         // Should revert with "Unexpected Mento denominator"
         vm.expectRevert("Unexpected Mento denominator");
         oracle.peek(
-            bytes32(CKES_ID),
             bytes32(USDT_ID),
+            bytes32(CKES_ID),
             100e18
         );
     }
@@ -142,8 +147,8 @@ contract MentoSpotOracleBasicTest is Test {
 
         // Convert 100 USDT to cKES
         (uint256 value,) = oracle.peek(
-            bytes32(CKES_ID),
             bytes32(USDT_ID),
+            bytes32(CKES_ID),
             100e18
         );
 
@@ -165,8 +170,8 @@ contract MentoSpotOracleBasicTest is Test {
 
         vm.expectRevert("Price below minimum");
         oracle.peek(
-            bytes32(CKES_ID),
             bytes32(USDT_ID),
+            bytes32(CKES_ID),
             100e18
         );
     }
@@ -175,10 +180,10 @@ contract MentoSpotOracleBasicTest is Test {
      * @notice Test that setSource preserves existing sanity bounds
      */
     function testSetSourcePreservesBounds() public {
-        oracle.setSource(CKES_ID, USDT_ID, KES_USD_FEED_ALT, MAX_AGE);
+        oracle.setSource(USDT_ID, CKES_ID, KES_USD_FEED_ALT, MAX_AGE);
 
         (address rateFeedID, uint256 maxAge, uint256 minPrice, uint256 maxPrice) =
-            oracle.sources(CKES_ID, USDT_ID);
+            oracle.sources(USDT_ID, CKES_ID);
 
         assertEq(rateFeedID, KES_USD_FEED_ALT, "Rate feed should update");
         assertEq(maxAge, MAX_AGE, "Max age should update");
@@ -189,12 +194,12 @@ contract MentoSpotOracleBasicTest is Test {
     function testSetSourceRevertsIfMissing() public {
         bytes6 OTHER_BASE = bytes6("OTHER");
         vm.expectRevert("Source not found");
-        oracle.setSource(OTHER_BASE, USDT_ID, KES_USD_FEED, MAX_AGE);
+        oracle.setSource(OTHER_BASE, CKES_ID, KES_USD_FEED, MAX_AGE);
     }
 
     function testAddSourceRevertsIfExists() public {
         vm.expectRevert("Source already set");
-        oracle.addSource(CKES_ID, USDT_ID, KES_USD_FEED, MAX_AGE);
+        oracle.addSource(USDT_ID, CKES_ID, KES_USD_FEED, MAX_AGE);
     }
 
     /**
@@ -207,8 +212,8 @@ contract MentoSpotOracleBasicTest is Test {
 
         vm.expectRevert("Price above maximum");
         oracle.peek(
-            bytes32(CKES_ID),
             bytes32(USDT_ID),
+            bytes32(CKES_ID),
             100e18
         );
     }
@@ -223,8 +228,8 @@ contract MentoSpotOracleBasicTest is Test {
 
         vm.expectRevert("Invalid Mento rate: zero");
         oracle.peek(
-            bytes32(CKES_ID),
             bytes32(USDT_ID),
+            bytes32(CKES_ID),
             100e18
         );
     }
@@ -240,15 +245,15 @@ contract MentoSpotOracleBasicTest is Test {
 
         // Convert various amounts
         (uint256 value1,) = oracle.peek(
-            bytes32(CKES_ID),
             bytes32(USDT_ID),
+            bytes32(CKES_ID),
             1e18 // 1 USDT
         );
         assertApproxEqRel(value1, 128.92e18, 0.01e18, "1 USDT should give ~128.92 cKES");
 
         (uint256 value2,) = oracle.peek(
-            bytes32(CKES_ID),
             bytes32(USDT_ID),
+            bytes32(CKES_ID),
             1000e18 // 1000 USDT
         );
         assertApproxEqRel(value2, 128920e18, 0.01e18, "1000 USDT should give ~128,920 cKES");
