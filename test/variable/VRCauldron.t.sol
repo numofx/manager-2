@@ -358,12 +358,116 @@ contract CauldronStirTests is CauldronPouredState {
         assertEq(art, ART.u128());
     }
 
+    function testMoveDebtAccountingInvariants() public {
+        cauldron.pour(vaultId, 0, ART.i128());
+        cauldron.build(address(this), otherVaultId, baseId, daiId);
+        cauldron.pour(otherVaultId, INK.i128(), 0);
+
+        (, , , uint128 prevFromSum) = cauldron.debt(baseId, usdcId);
+        (, , , uint128 prevToSum) = cauldron.debt(baseId, daiId);
+        uint128 art = ART.u128();
+        (uint128 artFromBefore, ) = cauldron.balances(vaultId);
+        (uint128 artToBefore, ) = cauldron.balances(otherVaultId);
+        assertEq(artFromBefore, ART.u128());
+        assertEq(artToBefore, 0);
+
+        cauldron.stir(vaultId, otherVaultId, 0, art);
+
+        (, , , uint128 fromSum) = cauldron.debt(baseId, usdcId);
+        (, , , uint128 toSum) = cauldron.debt(baseId, daiId);
+        (uint128 artFromAfter, ) = cauldron.balances(vaultId);
+        (uint128 artToAfter, ) = cauldron.balances(otherVaultId);
+
+        assertEq(fromSum + toSum, prevFromSum + prevToSum);
+        assertEq(fromSum, prevFromSum - art);
+        assertEq(toSum, prevToSum + art);
+        assertEq(artFromAfter, artFromBefore - art);
+        assertEq(artToAfter, artToBefore + art);
+        _assertDebtCeilings();
+    }
+
+    function testMoveDebtSameIlkNoDebtSumChange() public {
+        cauldron.pour(vaultId, 0, ART.i128());
+        cauldron.build(address(this), otherVaultId, baseId, usdcId);
+        cauldron.pour(otherVaultId, INK.i128(), 0);
+
+        (, , , uint128 prevSum) = cauldron.debt(baseId, usdcId);
+        cauldron.stir(vaultId, otherVaultId, 0, ART.u128());
+        (, , , uint128 sum) = cauldron.debt(baseId, usdcId);
+        assertEq(sum, prevSum);
+    }
+
+    function testStirDebtCeilingBypassReverts() public {
+        cauldron.setDebtLimits(baseId, usdcId, 500, 0, 0);
+        cauldron.setDebtLimits(baseId, daiId, 100, 0, 0);
+
+        cauldron.pour(vaultId, 0, uint128(200).i128());
+        cauldron.build(address(this), otherVaultId, baseId, daiId);
+        cauldron.pour(otherVaultId, INK.i128(), 0);
+
+        (uint128 prevFromArt, uint128 prevFromInk) = cauldron.balances(vaultId);
+        (uint128 prevToArt, uint128 prevToInk) = cauldron.balances(otherVaultId);
+        (, , , uint128 prevFromSum) = cauldron.debt(baseId, usdcId);
+        (, , , uint128 prevToSum) = cauldron.debt(baseId, daiId);
+
+        vm.expectRevert("Max debt exceeded");
+        cauldron.stir(vaultId, otherVaultId, 0, uint128(200));
+
+        (uint128 fromArt, uint128 fromInk) = cauldron.balances(vaultId);
+        (uint128 toArt, uint128 toInk) = cauldron.balances(otherVaultId);
+        assertEq(fromArt, prevFromArt);
+        assertEq(fromInk, prevFromInk);
+        assertEq(toArt, prevToArt);
+        assertEq(toInk, prevToInk);
+        (, , , uint128 fromSum) = cauldron.debt(baseId, usdcId);
+        (, , , uint128 toSum) = cauldron.debt(baseId, daiId);
+        assertEq(fromSum, prevFromSum);
+        assertEq(toSum, prevToSum);
+    }
+
+    function testStirDebtCeilingExactHeadroom() public {
+        cauldron.setDebtLimits(baseId, usdcId, 500, 0, 0);
+        cauldron.setDebtLimits(baseId, daiId, 100, 0, 0);
+
+        cauldron.build(address(this), otherVaultId, baseId, daiId);
+        cauldron.pour(otherVaultId, INK.i128(), 0);
+        cauldron.pour(otherVaultId, 0, uint128(60).i128());
+        cauldron.pour(vaultId, 0, uint128(40).i128());
+
+        cauldron.stir(vaultId, otherVaultId, 0, uint128(40));
+        _assertDebtCeilings();
+    }
+
+    function testStirDebtCeilingAboveHeadroomReverts() public {
+        cauldron.setDebtLimits(baseId, usdcId, 500, 0, 0);
+        cauldron.setDebtLimits(baseId, daiId, 100, 0, 0);
+
+        cauldron.build(address(this), otherVaultId, baseId, daiId);
+        cauldron.pour(otherVaultId, INK.i128(), 0);
+        cauldron.pour(otherVaultId, 0, uint128(60).i128());
+        cauldron.pour(vaultId, 0, uint128(41).i128());
+
+        vm.expectRevert("Max debt exceeded");
+        cauldron.stir(vaultId, otherVaultId, 0, uint128(41));
+    }
+
     function testUndercollateralizedAtOrigin() public {
         console.log("cannot stir from vault with undercollateralized origin");
         cauldron.pour(vaultId, 0, ART.i128());
         cauldron.build(address(this), otherVaultId, baseId, usdcId);
         vm.expectRevert("Undercollateralized at origin");
         cauldron.stir(vaultId, otherVaultId, INK.u128(), 0);
+    }
+
+    function _assertDebtCeilings() internal {
+        _assertDebtCeiling(baseId, usdcId);
+        _assertDebtCeiling(baseId, daiId);
+        _assertDebtCeiling(baseId, wethId);
+    }
+
+    function _assertDebtCeiling(bytes6 base, bytes6 ilk) internal {
+        (uint96 max, , uint8 dec, uint128 sum) = cauldron.debt(base, ilk);
+        assertLe(uint256(sum), uint256(max) * (10 ** dec));
     }
 }
 
