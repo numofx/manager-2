@@ -297,7 +297,18 @@ contract Cauldron is AccessControl(), Constants {
             balancesTo.ink += ink;
         }
         if (art > 0) {
-            require (vaultFrom.seriesId == vaultTo.seriesId, "Different series");
+            require(vaultFrom.seriesId == vaultTo.seriesId, "Different series");
+            if (vaultFrom.ilkId != vaultTo.ilkId) {
+                bytes6 baseId = series[vaultFrom.seriesId].baseId;
+                DataTypes.Debt memory debtFrom = debt[baseId][vaultFrom.ilkId];
+                DataTypes.Debt memory debtTo = debt[baseId][vaultTo.ilkId];
+                debtFrom.sum -= art;
+                debtTo.sum += art;
+                uint128 line = debtTo.max * uint128(10) ** debtTo.dec;
+                require(debtTo.sum <= line, "Max debt exceeded");
+                debt[baseId][vaultFrom.ilkId] = debtFrom;
+                debt[baseId][vaultTo.ilkId] = debtTo;
+            }
             balancesFrom.art -= art;
             balancesTo.art += art;
         }
@@ -483,3 +494,4 @@ contract Cauldron is AccessControl(), Constants {
         return inkValue.i256() - uint256(balances_.art).wmul(ratio).i256();
     }
 }
+

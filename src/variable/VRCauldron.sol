@@ -346,6 +346,17 @@ contract VRCauldron is UUPSUpgradeable, AccessControl, Constants {
             require(vaultFrom.baseId == vaultTo.baseId, "Different base");
             balancesFrom.art -= art;
             balancesTo.art += art;
+            if (vaultFrom.ilkId != vaultTo.ilkId) {
+                bytes6 baseId = vaultFrom.baseId;
+                DataTypes.Debt memory debtFrom = debt[baseId][vaultFrom.ilkId];
+                DataTypes.Debt memory debtTo = debt[baseId][vaultTo.ilkId];
+                debtFrom.sum -= art;
+                debtTo.sum += art;
+                uint128 lineTo = debtTo.max * uint128(10)**debtTo.dec;
+                require(debtTo.sum <= lineTo, "Max debt exceeded");
+                debt[baseId][vaultFrom.ilkId] = debtFrom;
+                debt[baseId][vaultTo.ilkId] = debtTo;
+            }
         }
 
         balances[from] = balancesFrom;
@@ -478,3 +489,4 @@ contract VRCauldron is UUPSUpgradeable, AccessControl, Constants {
         return inkValue.i256() - baseValue.wmul(ratio).i256();
     }
 }
+
