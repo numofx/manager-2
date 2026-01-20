@@ -75,11 +75,14 @@ contract Cauldron is AccessControl(), Constants {
     {
         require (assets[baseId] != address(0), "Base not found");
         require (assets[ilkId] != address(0), "Ilk not found");
-        DataTypes.Debt memory debt_ = debt[baseId][ilkId];
-        debt_.max = max;
-        debt_.min = min;
-        debt_.dec = dec;
-        debt[baseId][ilkId] = debt_;
+        require (min < max, "min>=max");
+        uint128 sum = debt[baseId][ilkId].sum;
+        debt[baseId][ilkId] = DataTypes.Debt({
+            max: max,
+            min: min,
+            dec: dec,
+            sum: sum
+        });
         emit DebtLimitsSet(baseId, ilkId, max, min, dec);
     }
 
@@ -494,4 +497,3 @@ contract Cauldron is AccessControl(), Constants {
         return inkValue.i256() - uint256(balances_.art).wmul(ratio).i256();
     }
 }
-

@@ -106,6 +106,12 @@ contract AssetAndIlkAddedTests is AssetAddedState {
         cauldron.setDebtLimits(baseId, otherIlkId, 0, 0, 0);
     }
 
+    function testDebtLimitMinAboveMax() public {
+        console.log("cannot set debt limits when min >= max");
+        vm.expectRevert("min>=max");
+        cauldron.setDebtLimits(baseId, usdcId, 1, 1, 0);
+    }
+
     function testSetDebtLimits() public {
         console.log("can set debt limits");
         cauldron.setDebtLimits(baseId, usdcId, 2, 1, 3);
