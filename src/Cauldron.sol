@@ -407,7 +407,8 @@ contract Cauldron is AccessControl(), Constants {
         balances_ = _pour(vaultId, vault_, balances_, oldSeries_, 0, -oldArt);
 
         // Change the vault series
-        _tweak(vaultId, newSeriesId, vault_.ilkId);
+        vault_ = _tweak(vaultId, newSeriesId, vault_.ilkId);
+        balances_ = balances[vaultId];
 
         // Set the vault art to it's newSeries value by adding `art` to that from the old series
         balances_ = _pour(vaultId, vault_, balances_, newSeries_, 0, oldArt + art);
