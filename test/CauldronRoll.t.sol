@@ -5,6 +5,7 @@ import "forge-std/Test.sol";
 import { Cauldron } from "src/Cauldron.sol";
 import { IFYToken } from "src/interfaces/IFYToken.sol";
 import { OracleMock } from "src/mocks/oracles/OracleMock.sol";
+import { RateOracleMock } from "src/mocks/oracles/RateOracleMock.sol";
 
 contract FYTokenMock {
     address public underlying;
@@ -19,7 +20,7 @@ contract FYTokenMock {
 contract CauldronRollTest is Test {
     Cauldron private cauldron;
     OracleMock private spotOracle;
-    OracleMock private rateOracle;
+    RateOracleMock private rateOracle;
 
     bytes6 private constant BASE_ID = 0x424153450000; // "BASE"
     bytes6 private constant ILK_ID = 0x494c4b310000; // "ILK1"
@@ -33,7 +34,7 @@ contract CauldronRollTest is Test {
     function setUp() public {
         cauldron = new Cauldron();
         spotOracle = new OracleMock();
-        rateOracle = new OracleMock();
+        rateOracle = new RateOracleMock();
 
         cauldron.grantRole(Cauldron.addAsset.selector, address(this));
         cauldron.grantRole(Cauldron.setLendingOracle.selector, address(this));
@@ -50,10 +51,10 @@ contract CauldronRollTest is Test {
         cauldron.addAsset(BASE_ID, base);
         cauldron.addAsset(ILK_ID, ilk);
 
+        rateOracle.set(1e18);
         cauldron.setLendingOracle(BASE_ID, rateOracle);
         cauldron.setSpotOracle(BASE_ID, ILK_ID, spotOracle, 1_000_000);
         spotOracle.set(1e18);
-        rateOracle.set(1e18);
 
         uint256 maturity1 = block.timestamp + 30 days;
         uint256 maturity2 = block.timestamp + 60 days;

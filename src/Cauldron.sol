@@ -92,6 +92,7 @@ contract Cauldron is AccessControl, Constants {
         auth
     {
         require (assets[baseId] != address(0), "Base not found");
+        _requireRateSource(oracle, baseId);
         lendingOracles[baseId] = oracle;
         emit RateOracleAdded(baseId, address(oracle));
     }
@@ -120,7 +121,7 @@ contract Cauldron is AccessControl, Constants {
         require (base != address(0), "Base not found");
         require (fyToken != IFYToken(address(0)), "Series need a fyToken");
         require (fyToken.underlying() == base, "Mismatched series and base");
-        require (lendingOracles[baseId] != IOracle(address(0)), "Rate oracle not found");
+        _requireRateSource(lendingOracles[baseId], baseId);
         require (series[seriesId].fyToken == IFYToken(address(0)), "Id already used");
         series[seriesId] = DataTypes.Series({
             fyToken: fyToken,
@@ -128,6 +129,18 @@ contract Cauldron is AccessControl, Constants {
             baseId: baseId
         });
         emit SeriesAdded(seriesId, baseId, address(fyToken));
+    }
+
+    function _requireRateSource(IOracle oracle, bytes6 baseId) private {
+        require(address(oracle) != address(0), "Missing lending oracle");
+        try oracle.get(baseId, RATE, 0) returns (uint256 value, uint256) {
+            require(value != 0, "Missing RATE source");
+        } catch (bytes memory reason) {
+            if (reason.length == 0) revert("Missing RATE source");
+            assembly {
+                revert(add(reason, 32), mload(reason))
+            }
+        }
     }
 
     /// @dev Add a new Ilk (approve an asset as collateral for a series).

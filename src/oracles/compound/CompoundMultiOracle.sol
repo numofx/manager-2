@@ -50,7 +50,7 @@ contract CompoundMultiOracle is IOracle, AccessControl, Constants {
         address source = sources[base][kind];
         require (source != address(0), "Source not found");
 
-        if (kind == RATE.b6()) accumulator = CTokenInterface(source).borrowIndex();
+        if (kind == RATE) accumulator = CTokenInterface(source).borrowIndex();
         else if (kind == CHI.b6()) accumulator = CTokenInterface(source).exchangeRateStored();
         else revert("Unknown oracle type");
 
