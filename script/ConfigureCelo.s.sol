@@ -183,7 +183,8 @@ contract ConfigureCelo is Script {
             USDT_ID,  // Using USDT as USD proxy
             CKES_ID,
             MENTO_KES_USD_FEED,
-            CKES_MAX_AGE  // Max age: 1 hour
+            CKES_MAX_AGE, // Max age: 1 hour
+            0             // minNumRates (0 = no minimum enforced)
         );
         console.log("   [OK] Set USDT->cKES source with staleness check (max age: 1 hour)");
 

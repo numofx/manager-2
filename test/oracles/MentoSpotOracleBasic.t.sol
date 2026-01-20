@@ -27,6 +27,7 @@ contract MentoSpotOracleBasicTest is Test {
     uint256 public constant MAX_AGE = 3600; // 1 hour
     uint256 public constant MIN_PRICE = 66.67e18; // Min cKES per USD
     uint256 public constant MAX_PRICE = 200e18;   // Max cKES per USD
+    uint256 public constant MIN_NUM_RATES = 0;
 
     function setUp() public {
         // Deploy mock
@@ -41,7 +42,7 @@ contract MentoSpotOracleBasicTest is Test {
         oracle.grantRole(oracle.setBounds.selector, address(this));
 
         // Configure oracle source (maxAge is set here)
-        oracle.addSource(USDT_ID, CKES_ID, KES_USD_FEED, MAX_AGE);
+        oracle.addSource(USDT_ID, CKES_ID, KES_USD_FEED, MAX_AGE, MIN_NUM_RATES);
 
         // Set price bounds separately
         oracle.setBounds(USDT_ID, CKES_ID, MIN_PRICE, MAX_PRICE);
@@ -52,7 +53,7 @@ contract MentoSpotOracleBasicTest is Test {
     }
 
     function testSourceDirectionMatchesCauldronConvention() public {
-        (address feed,,,) = oracle.sources(USDT_ID, CKES_ID);
+        (address feed,,,,) = oracle.sources(USDT_ID, CKES_ID);
         assertEq(feed, KES_USD_FEED, "Expected source at [USDT][cKES]");
     }
 
@@ -180,26 +181,67 @@ contract MentoSpotOracleBasicTest is Test {
      * @notice Test that setSource preserves existing sanity bounds
      */
     function testSetSourcePreservesBounds() public {
-        oracle.setSource(USDT_ID, CKES_ID, KES_USD_FEED_ALT, MAX_AGE);
+        oracle.setSource(USDT_ID, CKES_ID, KES_USD_FEED_ALT, MAX_AGE, MIN_NUM_RATES);
 
-        (address rateFeedID, uint256 maxAge, uint256 minPrice, uint256 maxPrice) =
+        (address rateFeedID, uint256 maxAge, uint256 minPrice, uint256 maxPrice, uint256 minNumRates) =
             oracle.sources(USDT_ID, CKES_ID);
 
         assertEq(rateFeedID, KES_USD_FEED_ALT, "Rate feed should update");
         assertEq(maxAge, MAX_AGE, "Max age should update");
         assertEq(minPrice, MIN_PRICE, "Min price should be preserved");
         assertEq(maxPrice, MAX_PRICE, "Max price should be preserved");
+        assertEq(minNumRates, MIN_NUM_RATES, "Min num rates should update");
     }
 
     function testSetSourceRevertsIfMissing() public {
         bytes6 OTHER_BASE = bytes6("OTHER");
         vm.expectRevert("Source not found");
-        oracle.setSource(OTHER_BASE, CKES_ID, KES_USD_FEED, MAX_AGE);
+        oracle.setSource(OTHER_BASE, CKES_ID, KES_USD_FEED, MAX_AGE, MIN_NUM_RATES);
     }
 
     function testAddSourceRevertsIfExists() public {
         vm.expectRevert("Source already set");
-        oracle.addSource(USDT_ID, CKES_ID, KES_USD_FEED, MAX_AGE);
+        oracle.addSource(USDT_ID, CKES_ID, KES_USD_FEED, MAX_AGE, MIN_NUM_RATES);
+    }
+
+    // ========== Minimum Reports Tests ==========
+
+    function testMinNumRatesRevertsWhenBelow() public {
+        oracle.setSource(USDT_ID, CKES_ID, KES_USD_FEED, MAX_AGE, 2);
+        sortedOraclesMock.setMedianRate(KES_USD_FEED, 7.757e21, block.timestamp);
+        sortedOraclesMock.setNumRates(KES_USD_FEED, 1);
+
+        vm.expectRevert("Insufficient oracle reports");
+        oracle.peek(
+            bytes32(USDT_ID),
+            bytes32(CKES_ID),
+            100e18
+        );
+    }
+
+    function testMinNumRatesBoundarySucceeds() public {
+        oracle.setSource(USDT_ID, CKES_ID, KES_USD_FEED, MAX_AGE, 2);
+        sortedOraclesMock.setMedianRate(KES_USD_FEED, 7.757e21, block.timestamp);
+        sortedOraclesMock.setNumRates(KES_USD_FEED, 2);
+
+        (uint256 value,) = oracle.peek(
+            bytes32(USDT_ID),
+            bytes32(CKES_ID),
+            100e18
+        );
+        assertGt(value, 0, "Should return valid value at minNumRates");
+    }
+
+    function testMinNumRatesZeroKeepsLegacyBehavior() public {
+        sortedOraclesMock.setMedianRate(KES_USD_FEED, 7.757e21, block.timestamp);
+        sortedOraclesMock.setNumRates(KES_USD_FEED, 0);
+
+        (uint256 value,) = oracle.peek(
+            bytes32(USDT_ID),
+            bytes32(CKES_ID),
+            100e18
+        );
+        assertGt(value, 0, "Should return value when minNumRates is disabled");
     }
 
     /**

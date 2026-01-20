@@ -35,7 +35,8 @@ contract MentoSpotOracle is IOracle, AccessControl {
         bytes6 indexed baseId,
         bytes6 indexed quoteId,
         address indexed rateFeedID,
-        uint256 maxAge
+        uint256 maxAge,
+        uint256 minNumRates
     );
     event BoundsSet(bytes6 indexed baseId, bytes6 indexed quoteId, uint256 minPrice, uint256 maxPrice);
 
@@ -56,6 +57,7 @@ contract MentoSpotOracle is IOracle, AccessControl {
         uint256 maxAge;          // Maximum age in seconds for a valid price
         uint256 minPrice;        // Minimum acceptable price in 1e18 (0 = no check)
         uint256 maxPrice;        // Maximum acceptable price in 1e18 (0 = no check)
+        uint256 minNumRates;     // Minimum number of reports required (0 = no check)
     }
 
     mapping(bytes6 => mapping(bytes6 => Source)) public sources;
@@ -75,13 +77,15 @@ contract MentoSpotOracle is IOracle, AccessControl {
      * @param quoteId Yield protocol identifier for quote asset (e.g., "USDT")
      * @param rateFeedID Mento rate feed identifier (e.g., 0xbAcEE37d31b9f022Ef5d232B9fD53F05a531c169 for KES/USD)
      * @param maxAge Maximum age in seconds (e.g., 3600 for 1 hour)
+     * @param minNumRates Minimum number of oracle reports required (0 to disable)
      * @dev This oracle will INVERT the Mento rate to return base-per-quote.
      */
     function addSource(
         bytes6 baseId,
         bytes6 quoteId,
         address rateFeedID,
-        uint256 maxAge
+        uint256 maxAge,
+        uint256 minNumRates
     ) external auth {
         require(rateFeedID != address(0), "Invalid rateFeedID");
         require(maxAge > 0, "maxAge must be > 0");
@@ -91,10 +95,11 @@ contract MentoSpotOracle is IOracle, AccessControl {
             rateFeedID: rateFeedID,
             maxAge: maxAge,
             minPrice: 0,    // No minimum bound by default
-            maxPrice: 0     // No maximum bound by default
+            maxPrice: 0,    // No maximum bound by default
+            minNumRates: minNumRates
         });
 
-        emit SourceSet(baseId, quoteId, rateFeedID, maxAge);
+        emit SourceSet(baseId, quoteId, rateFeedID, maxAge, minNumRates);
     }
 
     /**
@@ -103,6 +108,7 @@ contract MentoSpotOracle is IOracle, AccessControl {
      * @param quoteId Yield protocol identifier for quote asset (e.g., "USDT")
      * @param rateFeedID Mento rate feed identifier (e.g., 0xbAcEE37d31b9f022Ef5d232B9fD53F05a531c169 for KES/USD)
      * @param maxAge Maximum age in seconds (e.g., 3600 for 1 hour)
+     * @param minNumRates Minimum number of oracle reports required (0 to disable)
      * @dev This oracle will INVERT the Mento rate to return base-per-quote.
      *      Existing sanity bounds are preserved when updating a source.
      */
@@ -110,7 +116,8 @@ contract MentoSpotOracle is IOracle, AccessControl {
         bytes6 baseId,
         bytes6 quoteId,
         address rateFeedID,
-        uint256 maxAge
+        uint256 maxAge,
+        uint256 minNumRates
     ) external auth {
         require(rateFeedID != address(0), "Invalid rateFeedID");
         require(maxAge > 0, "maxAge must be > 0");
@@ -119,8 +126,9 @@ contract MentoSpotOracle is IOracle, AccessControl {
         require(existing.rateFeedID != address(0), "Source not found");
         existing.rateFeedID = rateFeedID;
         existing.maxAge = maxAge;
+        existing.minNumRates = minNumRates;
 
-        emit SourceSet(baseId, quoteId, rateFeedID, maxAge);
+        emit SourceSet(baseId, quoteId, rateFeedID, maxAge, minNumRates);
     }
 
     /**
@@ -204,6 +212,14 @@ contract MentoSpotOracle is IOracle, AccessControl {
 
         Source memory source = sources[baseId][quoteId];
         require(source.rateFeedID != address(0), "Source not found");
+
+        // Enforce minimum report count when configured
+        if (source.minNumRates != 0) {
+            require(
+                sortedOracles.numRates(source.rateFeedID) >= source.minNumRates,
+                "Insufficient oracle reports"
+            );
+        }
 
         // Fetch median rate from Mento SortedOracles (Fixidity format)
         uint256 rateNumerator;

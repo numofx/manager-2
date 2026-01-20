@@ -174,7 +174,8 @@ contract DeployMinimalCeloSystem is Script {
             USDT_ID,              // base (USDT collateral)
             CKES_ID,              // quote (cKES base asset)
             MENTO_KES_USD_FEED,   // Mento feed (returns USD/KES, will be inverted)
-            MAX_AGE               // 3600 seconds staleness limit
+            MAX_AGE,              // 3600 seconds staleness limit
+            0                     // minNumRates (0 = no minimum enforced)
         );
 
         // Set sanity bounds for inverted price (cKES per USD)
