@@ -16,7 +16,7 @@ library CauldronMath {
     }
 }
 
-contract Cauldron is AccessControl(), Constants {
+contract Cauldron is AccessControl, Constants {
     using CauldronMath for uint128;
     using Math for *;
     using Cast for *;
