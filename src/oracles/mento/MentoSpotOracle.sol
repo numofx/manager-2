@@ -15,11 +15,11 @@ import "./ISortedOracles.sol";
  * CRITICAL INVERSION LOGIC:
  * - Mento KES/USD feed returns: USD per 1 KES in 1e24 precision
  * - Yield Protocol needs: cKES per 1 USDT in 1e18 precision (for collateral valuation)
- * - This oracle INVERTS the Mento rate: cKES/USD = 1 / (USD/KES)
+ * - This oracle INVERTS the Mento rate: cKES_per_USD = 1e42 / rateNumerator
  *
  * Example:
- * - Mento returns: 0.0073 USD per 1 KES (7.3e21 in 1e24)
- * - Oracle returns: 137 cKES per 1 USD (137e18 in 1e18)
+ * - rateNumerator = 7.3e21, rateDenominator = 1e24 (USD per KES = 7.3e21 / 1e24)
+ * - Oracle returns: 1e42 / rateNumerator ≈ 137e18 cKES per USD
  * - Usage: 100 USDT collateral = 100 * 137 = 13,700 cKES equivalent value
  *
  * Security Features:
@@ -186,10 +186,11 @@ contract MentoSpotOracle is IOracle, AccessControl {
      * @return value Converted amount (base asset, e.g., cKES equivalent)
      * @return updateTime Price timestamp
      * @dev INVERSION LOGIC:
-     *      1. Fetch Mento rate: USD per KES (1e24)
-     *      2. Convert to 1e18: rate18 = mentoRate / 1e6
-     *      3. Invert: cKES_per_USD = 1e42 / mentoRate
-     *      4. Apply to amount: value = (amount * cKES_per_USD) / 1e18
+     *      1. Fetch Mento rate: USD per KES (Fixidity, denominator = 1e24)
+     *      2. Invert using full precision:
+     *         cKES_per_USD = (1e18 * 1e24) / rateNumerator = 1e42 / rateNumerator
+     *      3. Apply to amount:
+     *         value = (amount * cKES_per_USD) / 1e18
      */
     function _peek(
         bytes6 baseId,
@@ -246,9 +247,9 @@ contract MentoSpotOracle is IOracle, AccessControl {
         // Convert quote amount (USDT) to base equivalent (cKES)
         // Formula: value = (amount * rate) / 1e18
         //
-        // Example: 100 USDT at 137 cKES/USD
+        // Example: 100 USDT with rateNumerator = 7.3e21 (rateDenominator = 1e24)
         // - amount = 100e18 (100 USDT in 18 decimals)
-        // - invertedRate = 137e18
+        // - invertedRate = 1e42 / rateNumerator ≈ 137e18
         // - value = (100e18 * 137e18) / 1e18 = 13700e18 (13,700 cKES)
         value = (amount * invertedRate) / 1e18;
     }
