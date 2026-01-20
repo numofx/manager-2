@@ -27,6 +27,7 @@ contract Cauldron is AccessControl, Constants {
     event SpotOracleAdded(bytes6 indexed baseId, bytes6 indexed ilkId, address indexed oracle, uint32 ratio);
     event RateOracleAdded(bytes6 indexed baseId, address indexed oracle);
     event DebtLimitsSet(bytes6 indexed baseId, bytes6 indexed ilkId, uint96 max, uint24 min, uint8 dec);
+    event IlkToWadSet(bytes6 indexed ilkId, uint256 wad);
 
     event VaultBuilt(bytes12 indexed vaultId, address indexed owner, bytes6 indexed seriesId, bytes6 ilkId);
     event VaultTweaked(bytes12 indexed vaultId, bytes6 indexed seriesId, bytes6 indexed ilkId);
@@ -46,6 +47,7 @@ contract Cauldron is AccessControl, Constants {
 
     mapping (bytes6 => IOracle)                                 public lendingOracles;  // Variable rate lending oracle for an underlying
     mapping (bytes6 => mapping(bytes6 => DataTypes.SpotOracle)) public spotOracles;     // [assetId][assetId] Spot price oracles
+    mapping (bytes6 => uint256)                                 public ilkToWad;        // Scale factor to normalize collateral to WAD (1e18)
 
     // ==== Protocol data ====
     mapping (bytes6 => mapping(bytes6 => DataTypes.Debt))       public debt;            // [baseId][ilkId] Max and sum of debt per underlying and collateral.
@@ -110,6 +112,17 @@ contract Cauldron is AccessControl, Constants {
         emit SpotOracleAdded(baseId, ilkId, address(oracle), ratio);
     }
 
+    /// @dev Set the collateral scaling factor for an ilk: 10 ** (18 - collateralDecimals).
+    function setIlkToWad(bytes6 ilkId, uint256 wad)
+        external
+        auth
+    {
+        require (assets[ilkId] != address(0), "Ilk not found");
+        require (wad != 0, "Ilk scale is zero");
+        ilkToWad[ilkId] = wad;
+        emit IlkToWadSet(ilkId, wad);
+    }
+
     /// @dev Add a new series
     function addSeries(bytes6 seriesId, bytes6 baseId, IFYToken fyToken)
         external
@@ -145,6 +158,7 @@ contract Cauldron is AccessControl, Constants {
                 spotOracles[series_.baseId][ilkIds[i]].oracle != IOracle(address(0)),
                 "Spot oracle not found"
             );
+            require (ilkToWad[ilkIds[i]] != 0, "Ilk scale not set");
             ilks[seriesId][ilkIds[i]] = true;
             emit IlkAdded(seriesId, ilkIds[i]);
         }
@@ -488,7 +502,11 @@ contract Cauldron is AccessControl, Constants {
     {
         DataTypes.SpotOracle memory spotOracle_ = spotOracles[series_.baseId][vault_.ilkId];
         uint256 ratio = uint256(spotOracle_.ratio) * 1e12;   // Normalized to 18 decimals
-        (uint256 inkValue,) = spotOracle_.oracle.get(vault_.ilkId, series_.baseId, balances_.ink);    // ink * spot
+        // balances_.ink is raw token units; normalize via ilkToWad before oracle.
+        uint256 scale = ilkToWad[vault_.ilkId];
+        require (scale != 0, "Ilk scale not set");
+        uint256 inkWad = uint256(balances_.ink) * scale;
+        (uint256 inkValue,) = spotOracle_.oracle.get(vault_.ilkId, series_.baseId, inkWad);    // ink * spot
 
         if (uint32(block.timestamp) >= series_.maturity) {
             uint256 accrual_ = _accrual(vault_.seriesId, series_);

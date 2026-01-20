@@ -142,6 +142,7 @@ contract DeployMinimalCeloSystem is Script {
         cauldron.grantRole(Cauldron.addAsset.selector, admin);
         cauldron.grantRole(Cauldron.setSpotOracle.selector, admin);
         cauldron.grantRole(Cauldron.setDebtLimits.selector, admin);
+        cauldron.grantRole(Cauldron.setIlkToWad.selector, admin);
         ladle.grantRole(Ladle.addJoin.selector, admin);
         mentoOracle.grantRole(MentoSpotOracle.addSource.selector, admin);
         mentoOracle.grantRole(MentoSpotOracle.setSource.selector, admin);
@@ -156,6 +157,10 @@ contract DeployMinimalCeloSystem is Script {
 
         // USDT is the COLLATERAL asset (what backs borrows)
         cauldron.addAsset(USDT_ID, USDT);
+
+        // Scale collateral to WAD (1e18)
+        cauldron.setIlkToWad(USDT_ID, 1e12); // USDT has 6 decimals
+        cauldron.setIlkToWad(CKES_ID, 1); // 18-dec collateral
 
         // ============================================================
         // STEP 7: Register Joins with Ladle
