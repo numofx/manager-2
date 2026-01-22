@@ -235,7 +235,13 @@ contract MentoSpotOracle is IOracle, ILiquidationOracle, IRiskOracle, AccessCont
         if (roundId == lastRoundId) return;
         lastRoundId = roundId;
 
-        if (spot >= riskOffLo && spot <= riskOffHi) {
+        uint256 peg = 1e18;
+        uint256 diff = spot > peg ? spot - peg : peg - spot;
+        uint256 allowed = spot >= peg
+            ? (riskOffHi > peg ? riskOffHi - peg : 0)
+            : (peg > riskOffLo ? peg - riskOffLo : 0);
+
+        if (diff <= allowed) {
             if (inBandCount < 3) inBandCount++;
             if (riskOff && inBandCount >= 3) {
                 riskOff = false;
@@ -346,7 +352,20 @@ contract MentoSpotOracle is IOracle, ILiquidationOracle, IRiskOracle, AccessCont
 
         uint80 answeredInRound;
         int256 answer;
-        (roundId, answer, , updatedAt, answeredInRound) = usdtUsdFeed.latestRoundData();
+        try usdtUsdFeed.latestRoundData() returns (
+            uint80 roundId_,
+            int256 answer_,
+            uint256,
+            uint256 updatedAt_,
+            uint80 answeredInRound_
+        ) {
+            roundId = roundId_;
+            answer = answer_;
+            updatedAt = updatedAt_;
+            answeredInRound = answeredInRound_;
+        } catch {
+            return (false, 0, 0, 0);
+        }
 
         if (answer <= 0) return (false, 0, roundId, updatedAt);
         if (updatedAt == 0) return (false, 0, roundId, updatedAt);
@@ -355,11 +374,15 @@ contract MentoSpotOracle is IOracle, ILiquidationOracle, IRiskOracle, AccessCont
         if (block.timestamp - updatedAt > maxAge) return (false, 0, roundId, updatedAt);
 
         uint256 scaled = uint256(answer);
-        uint8 decimals = usdtUsdFeed.decimals();
+        uint8 decimals;
+        try usdtUsdFeed.decimals() returns (uint8 decimals_) {
+            decimals = decimals_;
+        } catch {
+            return (false, 0, roundId, updatedAt);
+        }
+        if (decimals > TARGET_DECIMALS) return (false, 0, roundId, updatedAt);
         if (decimals < TARGET_DECIMALS) {
             scaled *= 10 ** (TARGET_DECIMALS - decimals);
-        } else if (decimals > TARGET_DECIMALS) {
-            scaled /= 10 ** (decimals - TARGET_DECIMALS);
         }
 
         return (true, scaled, roundId, updatedAt);
