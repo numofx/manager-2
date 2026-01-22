@@ -5,6 +5,8 @@ import "forge-std/Test.sol";
 import { MentoSpotOracle } from "src/oracles/mento/MentoSpotOracle.sol";
 import { ISortedOracles } from "src/oracles/mento/ISortedOracles.sol";
 import { SortedOraclesMock } from "src/mocks/oracles/mento/SortedOraclesMock.sol";
+import { ChainlinkAggregatorV3MockEx } from "src/mocks/oracles/chainlink/ChainlinkAggregatorV3MockEx.sol";
+import { AggregatorV3Interface } from "src/oracles/chainlink/AggregatorV3Interface.sol";
 
 /**
  * @title MentoSpotOracleBasicTest
@@ -14,6 +16,7 @@ import { SortedOraclesMock } from "src/mocks/oracles/mento/SortedOraclesMock.sol
 contract MentoSpotOracleBasicTest is Test {
     MentoSpotOracle public oracle;
     SortedOraclesMock public sortedOraclesMock;
+    ChainlinkAggregatorV3MockEx public usdtUsdAggregator;
 
     // Asset identifiers
     bytes6 public constant CKES_ID = 0x634B45530000; // "cKES"
@@ -32,9 +35,13 @@ contract MentoSpotOracleBasicTest is Test {
     function setUp() public {
         // Deploy mock
         sortedOraclesMock = new SortedOraclesMock();
+        usdtUsdAggregator = new ChainlinkAggregatorV3MockEx(8);
 
         // Deploy oracle
-        oracle = new MentoSpotOracle(ISortedOracles(address(sortedOraclesMock)));
+        oracle = new MentoSpotOracle(
+            ISortedOracles(address(sortedOraclesMock)),
+            AggregatorV3Interface(address(usdtUsdAggregator))
+        );
 
         // Grant permissions
         oracle.grantRole(oracle.addSource.selector, address(this));
@@ -46,6 +53,8 @@ contract MentoSpotOracleBasicTest is Test {
 
         // Set price bounds separately
         oracle.setBounds(USDT_ID, CKES_ID, MIN_PRICE, MAX_PRICE);
+
+        usdtUsdAggregator.set(100_000_000);
 
         // Set initial rate: 7.757e21 / 1e24 = 0.007757 USD per KES
         // Inverted: 1e42 / 7.757e21 = 128.92e18 cKES per USD
@@ -299,5 +308,36 @@ contract MentoSpotOracleBasicTest is Test {
             1000e18 // 1000 USDT
         );
         assertApproxEqRel(value2, 128920e18, 0.01e18, "1000 USDT should give ~128,920 cKES");
+    }
+
+    function testMintBandRevertsOnLowUsdtUsd() public {
+        usdtUsdAggregator.set(89_000_000);
+        sortedOraclesMock.setMedianRate(KES_USD_FEED, 7.757e21, block.timestamp);
+
+        vm.expectRevert("USDT/USD oob mint");
+        oracle.peek(
+            bytes32(USDT_ID),
+            bytes32(CKES_ID),
+            100e18
+        );
+    }
+
+    function testLiquidationCapsPremium() public {
+        usdtUsdAggregator.set(105_000_000);
+        sortedOraclesMock.setMedianRate(KES_USD_FEED, 7.757e21, block.timestamp);
+
+        (uint256 mintValue,) = oracle.peek(
+            bytes32(USDT_ID),
+            bytes32(CKES_ID),
+            100e18
+        );
+        (uint256 liqValue,) = oracle.peekLiquidation(
+            bytes32(USDT_ID),
+            bytes32(CKES_ID),
+            100e18
+        );
+
+        uint256 expectedLiq = (mintValue * 1e18) / 1_050_000_000_000_000_000;
+        assertApproxEqRel(liqValue, expectedLiq, 1e13, "Liquidation should cap USDT premium");
     }
 }

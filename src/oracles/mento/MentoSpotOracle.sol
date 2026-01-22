@@ -5,6 +5,9 @@ import "@yield-protocol/utils-v2/src/access/AccessControl.sol";
 import "@yield-protocol/utils-v2/src/utils/Cast.sol";
 import "@yield-protocol/utils-v2/src/utils/Math.sol";
 import "../../interfaces/IOracle.sol";
+import "../../interfaces/ILiquidationOracle.sol";
+import "../../interfaces/IRiskOracle.sol";
+import "../chainlink/AggregatorV3Interface.sol";
 import "./ISortedOracles.sol";
 
 /**
@@ -27,7 +30,7 @@ import "./ISortedOracles.sol";
  * - Sanity bounds: Rejects prices outside [min, max] range
  * - Access control: Only authorized addresses can configure
  */
-contract MentoSpotOracle is IOracle, AccessControl {
+contract MentoSpotOracle is IOracle, ILiquidationOracle, IRiskOracle, AccessControl {
     using Cast for bytes32;
     using Math for uint256;
 
@@ -51,6 +54,22 @@ contract MentoSpotOracle is IOracle, AccessControl {
 
     /// @dev Mento SortedOracles contract instance
     ISortedOracles public immutable sortedOracles;
+    AggregatorV3Interface public immutable usdtUsdFeed;
+
+    uint32 public maxAge = 3600;
+    uint256 public mintBandLo = 0.90e18;
+    uint256 public mintBandHi = 1.10e18;
+    uint256 public riskOffLo = 0.97e18;
+    uint256 public riskOffHi = 1.03e18;
+
+    bool public riskOff;
+    uint8 public inBandCount;
+    uint80 public lastRoundId;
+
+    enum Use {
+        MINT,
+        LIQUIDATION
+    }
 
     struct Source {
         address rateFeedID;      // Mento rate feed identifier (e.g., KES/USD feed)
@@ -66,9 +85,11 @@ contract MentoSpotOracle is IOracle, AccessControl {
      * @notice Construct the MentoSpotOracle
      * @param sortedOracles_ Address of Mento's SortedOracles contract
      */
-    constructor(ISortedOracles sortedOracles_) {
+    constructor(ISortedOracles sortedOracles_, AggregatorV3Interface usdtUsdFeed_) {
         require(address(sortedOracles_) != address(0), "Invalid SortedOracles address");
+        require(address(usdtUsdFeed_) != address(0), "Invalid USDT/USD feed");
         sortedOracles = sortedOracles_;
+        usdtUsdFeed = usdtUsdFeed_;
     }
 
     /**
@@ -76,7 +97,7 @@ contract MentoSpotOracle is IOracle, AccessControl {
      * @param baseId Yield protocol identifier for base asset (e.g., "cKES")
      * @param quoteId Yield protocol identifier for quote asset (e.g., "USDT")
      * @param rateFeedID Mento rate feed identifier (e.g., 0xbAcEE37d31b9f022Ef5d232B9fD53F05a531c169 for KES/USD)
-     * @param maxAge Maximum age in seconds (e.g., 3600 for 1 hour)
+     * @param maxAge_ Maximum age in seconds (e.g., 3600 for 1 hour)
      * @param minNumRates Minimum number of oracle reports required (0 to disable)
      * @dev This oracle will INVERT the Mento rate to return base-per-quote.
      */
@@ -84,22 +105,22 @@ contract MentoSpotOracle is IOracle, AccessControl {
         bytes6 baseId,
         bytes6 quoteId,
         address rateFeedID,
-        uint256 maxAge,
+        uint256 maxAge_,
         uint256 minNumRates
     ) external auth {
         require(rateFeedID != address(0), "Invalid rateFeedID");
-        require(maxAge > 0, "maxAge must be > 0");
+        require(maxAge_ > 0, "maxAge must be > 0");
         require(sources[baseId][quoteId].rateFeedID == address(0), "Source already set");
 
         sources[baseId][quoteId] = Source({
             rateFeedID: rateFeedID,
-            maxAge: maxAge,
+            maxAge: maxAge_,
             minPrice: 0,    // No minimum bound by default
             maxPrice: 0,    // No maximum bound by default
             minNumRates: minNumRates
         });
 
-        emit SourceSet(baseId, quoteId, rateFeedID, maxAge, minNumRates);
+        emit SourceSet(baseId, quoteId, rateFeedID, maxAge_, minNumRates);
     }
 
     /**
@@ -107,7 +128,7 @@ contract MentoSpotOracle is IOracle, AccessControl {
      * @param baseId Yield protocol identifier for base asset (e.g., "cKES")
      * @param quoteId Yield protocol identifier for quote asset (e.g., "USDT")
      * @param rateFeedID Mento rate feed identifier (e.g., 0xbAcEE37d31b9f022Ef5d232B9fD53F05a531c169 for KES/USD)
-     * @param maxAge Maximum age in seconds (e.g., 3600 for 1 hour)
+     * @param maxAge_ Maximum age in seconds (e.g., 3600 for 1 hour)
      * @param minNumRates Minimum number of oracle reports required (0 to disable)
      * @dev This oracle will INVERT the Mento rate to return base-per-quote.
      *      Existing sanity bounds are preserved when updating a source.
@@ -116,19 +137,19 @@ contract MentoSpotOracle is IOracle, AccessControl {
         bytes6 baseId,
         bytes6 quoteId,
         address rateFeedID,
-        uint256 maxAge,
+        uint256 maxAge_,
         uint256 minNumRates
     ) external auth {
         require(rateFeedID != address(0), "Invalid rateFeedID");
-        require(maxAge > 0, "maxAge must be > 0");
+        require(maxAge_ > 0, "maxAge must be > 0");
 
         Source storage existing = sources[baseId][quoteId];
         require(existing.rateFeedID != address(0), "Source not found");
         existing.rateFeedID = rateFeedID;
-        existing.maxAge = maxAge;
+        existing.maxAge = maxAge_;
         existing.minNumRates = minNumRates;
 
-        emit SourceSet(baseId, quoteId, rateFeedID, maxAge, minNumRates);
+        emit SourceSet(baseId, quoteId, rateFeedID, maxAge_, minNumRates);
     }
 
     /**
@@ -166,7 +187,7 @@ contract MentoSpotOracle is IOracle, AccessControl {
         bytes32 quote,
         uint256 amount
     ) external view virtual override returns (uint256 value, uint256 updateTime) {
-        return _peek(base.b6(), quote.b6(), amount);
+        return _peek(base.b6(), quote.b6(), amount, Use.MINT);
     }
 
     /**
@@ -183,7 +204,47 @@ contract MentoSpotOracle is IOracle, AccessControl {
         bytes32 quote,
         uint256 amount
     ) external virtual override returns (uint256 value, uint256 updateTime) {
-        return _peek(base.b6(), quote.b6(), amount);
+        return _peek(base.b6(), quote.b6(), amount, Use.MINT);
+    }
+
+    function peekLiquidation(
+        bytes32 base,
+        bytes32 quote,
+        uint256 amount
+    ) external view virtual override returns (uint256 value, uint256 updateTime) {
+        return _peek(base.b6(), quote.b6(), amount, Use.LIQUIDATION);
+    }
+
+    function getLiquidation(
+        bytes32 base,
+        bytes32 quote,
+        uint256 amount
+    ) external virtual override returns (uint256 value, uint256 updateTime) {
+        return _peek(base.b6(), quote.b6(), amount, Use.LIQUIDATION);
+    }
+
+    function updateRiskOff() external override {
+        (bool ok, uint256 spot, uint80 roundId,) = _readUsdtUsdSpot1e18();
+
+        if (!ok) {
+            riskOff = true;
+            inBandCount = 0;
+            return;
+        }
+
+        if (roundId == lastRoundId) return;
+        lastRoundId = roundId;
+
+        if (spot >= riskOffLo && spot <= riskOffHi) {
+            if (inBandCount < 3) inBandCount++;
+            if (riskOff && inBandCount >= 3) {
+                riskOff = false;
+                inBandCount = 3;
+            }
+        } else {
+            riskOff = true;
+            inBandCount = 0;
+        }
     }
 
     /**
@@ -203,7 +264,8 @@ contract MentoSpotOracle is IOracle, AccessControl {
     function _peek(
         bytes6 baseId,
         bytes6 quoteId,
-        uint256 amount
+        uint256 amount,
+        Use use
     ) private view returns (uint256 value, uint256 updateTime) {
         // Handle same-asset conversion
         if (baseId == quoteId) {
@@ -259,6 +321,8 @@ contract MentoSpotOracle is IOracle, AccessControl {
             require(invertedRate <= source.maxPrice, "Price above maximum");
         }
 
+        (uint256 usdtUsd, , uint256 usdtUpdatedAt) = _usdtUsd1e18(use);
+
         // ========== AMOUNT CONVERSION ==========
         // Convert quote amount (USDT) to base equivalent (cKES)
         // Formula: value = (amount * rate) / 1e18
@@ -267,6 +331,49 @@ contract MentoSpotOracle is IOracle, AccessControl {
         // - amount = 100e18 (100 USDT in 18 decimals)
         // - invertedRate = 1e42 / rateNumerator ≈ 137e18
         // - value = (100e18 * 137e18) / 1e18 = 13700e18 (13,700 cKES)
-        value = (amount * invertedRate) / 1e18;
+        value = amount.wmul(invertedRate);
+        value = value.wmul(usdtUsd);
+
+        if (usdtUpdatedAt < updateTime) updateTime = usdtUpdatedAt;
+    }
+
+    function _readUsdtUsdSpot1e18()
+        internal
+        view
+        returns (bool ok, uint256 spot, uint80 roundId, uint256 updatedAt)
+    {
+        if (address(usdtUsdFeed) == address(0)) return (false, 0, 0, 0);
+
+        uint80 answeredInRound;
+        int256 answer;
+        (roundId, answer, , updatedAt, answeredInRound) = usdtUsdFeed.latestRoundData();
+
+        if (answer <= 0) return (false, 0, roundId, updatedAt);
+        if (updatedAt == 0) return (false, 0, roundId, updatedAt);
+        if (answeredInRound < roundId) return (false, 0, roundId, updatedAt);
+        if (updatedAt > block.timestamp) return (false, 0, roundId, updatedAt);
+        if (block.timestamp - updatedAt > maxAge) return (false, 0, roundId, updatedAt);
+
+        uint256 scaled = uint256(answer);
+        uint8 decimals = usdtUsdFeed.decimals();
+        if (decimals < TARGET_DECIMALS) {
+            scaled *= 10 ** (TARGET_DECIMALS - decimals);
+        } else if (decimals > TARGET_DECIMALS) {
+            scaled /= 10 ** (decimals - TARGET_DECIMALS);
+        }
+
+        return (true, scaled, roundId, updatedAt);
+    }
+
+    function _usdtUsd1e18(Use use) internal view returns (uint256 spot, uint80 roundId, uint256 updatedAt) {
+        bool ok;
+        (ok, spot, roundId, updatedAt) = _readUsdtUsdSpot1e18();
+        require(ok, "USDT/USD invalid");
+
+        if (use == Use.MINT) {
+            require(spot >= mintBandLo && spot <= mintBandHi, "USDT/USD oob mint");
+        } else if (spot > 1e18) {
+            spot = 1e18;
+        }
     }
 }
