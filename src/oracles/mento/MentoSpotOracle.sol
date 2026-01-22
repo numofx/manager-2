@@ -176,7 +176,7 @@ contract MentoSpotOracle is IOracle, ILiquidationOracle, IRiskOracle, AccessCont
      * @notice Peek at the latest oracle price without state changes
      * @param base Base asset identifier (e.g., cKES)
      * @param quote Quote asset identifier (e.g., USDT)
-     * @param amount Amount of quote asset (USDT) to convert
+     * @param amount Amount of quote asset (USDT) to convert, in WAD (1e18)
      * @return value Equivalent amount in base asset (cKES), in 1e18 precision
      * @return updateTime Timestamp when the price was last updated
      * @dev Returns cKES per USDT (≈ cKES/USD), scaled to 1e18
@@ -194,7 +194,7 @@ contract MentoSpotOracle is IOracle, ILiquidationOracle, IRiskOracle, AccessCont
      * @notice Get the latest oracle price (same as peek for this oracle)
      * @param base Base asset identifier (e.g., cKES)
      * @param quote Quote asset identifier (e.g., USDT)
-     * @param amount Amount of quote asset (USDT) to convert
+     * @param amount Amount of quote asset (USDT) to convert, in WAD (1e18)
      * @return value Equivalent amount in base asset (cKES), in 1e18 precision
      * @return updateTime Timestamp when the price was last updated
      * @dev Returns cKES per USDT (≈ cKES/USD), scaled to 1e18
@@ -257,7 +257,7 @@ contract MentoSpotOracle is IOracle, ILiquidationOracle, IRiskOracle, AccessCont
      * @notice Internal function to fetch and convert prices from Mento
      * @param baseId Base asset identifier (bytes6)
      * @param quoteId Quote asset identifier (bytes6)
-     * @param amount Amount to convert (quote asset, e.g., USDT amount)
+     * @param amount Amount to convert (quote asset, e.g., USDT amount), in WAD (1e18)
      * @return value Converted amount (base asset, e.g., cKES equivalent)
      * @return updateTime Price timestamp
      * @dev INVERSION LOGIC:

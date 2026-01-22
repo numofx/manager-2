@@ -23,6 +23,9 @@ interface ICauldron {
     /// @dev Assets available in Cauldron.
     function assets(bytes6 assetsId) external view returns (address);
 
+    /// @dev Scale factor to normalize collateral to WAD (1e18).
+    function ilkToWad(bytes6 ilkId) external view returns (uint256);
+
     /// @dev Each vault records debt and collateral balances_.
     function balances(bytes12 vault)
         external
@@ -47,6 +50,9 @@ interface ICauldron {
         external
         view
         returns (DataTypes.SpotOracle memory);
+
+    /// @dev Set the collateral scaling factor for an ilk.
+    function setIlkToWad(bytes6 ilkId, uint256 wad) external;
 
     /// @dev Create a new vault, linked to a series (and therefore underlying) and up to 5 collateral types
     function build(

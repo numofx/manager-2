@@ -38,6 +38,7 @@ contract CauldronRollTest is Test {
         cauldron.grantRole(Cauldron.addAsset.selector, address(this));
         cauldron.grantRole(Cauldron.setLendingOracle.selector, address(this));
         cauldron.grantRole(Cauldron.setSpotOracle.selector, address(this));
+        cauldron.grantRole(Cauldron.setIlkToWad.selector, address(this));
         cauldron.grantRole(Cauldron.addSeries.selector, address(this));
         cauldron.grantRole(Cauldron.addIlks.selector, address(this));
         cauldron.grantRole(Cauldron.setDebtLimits.selector, address(this));
@@ -49,6 +50,7 @@ contract CauldronRollTest is Test {
         address ilk = address(0xCAFE);
         cauldron.addAsset(BASE_ID, base);
         cauldron.addAsset(ILK_ID, ilk);
+        cauldron.setIlkToWad(ILK_ID, 1);
 
         cauldron.setLendingOracle(BASE_ID, rateOracle);
         cauldron.setSpotOracle(BASE_ID, ILK_ID, spotOracle, 1_000_000);
