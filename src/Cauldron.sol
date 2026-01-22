@@ -2,6 +2,8 @@
 pragma solidity >=0.8.13;
 import "./interfaces/IFYToken.sol";
 import "./interfaces/IOracle.sol";
+import "./interfaces/ILiquidationOracle.sol";
+import "./interfaces/IRiskOracle.sol";
 import "./interfaces/DataTypes.sol";
 import "@yield-protocol/utils-v2/src/access/AccessControl.sol";
 import "@yield-protocol/utils-v2/src/utils/Math.sol";
@@ -294,6 +296,13 @@ contract Cauldron is AccessControl, Constants {
         (DataTypes.Vault memory vaultFrom, , DataTypes.Balances memory balancesFrom) = vaultData(from, false);
         (DataTypes.Vault memory vaultTo, , DataTypes.Balances memory balancesTo) = vaultData(to, false);
 
+        if (ink > 0 && balancesFrom.art > 0) {
+            _requireRiskOffOk(series[vaultFrom.seriesId].baseId, vaultFrom.ilkId);
+        }
+        if (art > 0) {
+            _requireRiskOffOk(series[vaultTo.seriesId].baseId, vaultTo.ilkId);
+        }
+
         if (ink > 0) {
             require (vaultFrom.ilkId == vaultTo.ilkId, "Different collateral");
             balancesFrom.ink -= ink;
@@ -319,8 +328,8 @@ contract Cauldron is AccessControl, Constants {
         balances[from] = balancesFrom;
         balances[to] = balancesTo;
 
-        if (ink > 0) require(_level(vaultFrom, balancesFrom, series[vaultFrom.seriesId]) >= 0, "Undercollateralized at origin");
-        if (art > 0) require(_level(vaultTo, balancesTo, series[vaultTo.seriesId]) >= 0, "Undercollateralized at destination");
+        if (ink > 0) require(_level(vaultFrom, balancesFrom, series[vaultFrom.seriesId], false) >= 0, "Undercollateralized at origin");
+        if (art > 0) require(_level(vaultTo, balancesTo, series[vaultTo.seriesId], false) >= 0, "Undercollateralized at destination");
 
         emit VaultStirred(from, to, ink, art);
         return (balancesFrom, balancesTo);
@@ -370,10 +379,14 @@ contract Cauldron is AccessControl, Constants {
     {
         (DataTypes.Vault memory vault_, DataTypes.Series memory series_, DataTypes.Balances memory balances_) = vaultData(vaultId, true);
 
+        if (art > 0 || (ink < 0 && balances_.art > 0)) {
+            _requireRiskOffOk(series_.baseId, vault_.ilkId);
+        }
+
         balances_ = _pour(vaultId, vault_, balances_, series_, ink, art);
 
         if (balances_.art > 0 && (ink < 0 || art > 0))                          // If there is debt and we are less safe
-            require(_level(vault_, balances_, series_) >= 0, "Undercollateralized");
+            require(_level(vault_, balances_, series_, false) >= 0, "Undercollateralized");
         return balances_;
     }
 
@@ -402,6 +415,8 @@ contract Cauldron is AccessControl, Constants {
         DataTypes.Series memory newSeries_ = series[newSeriesId];
         require (oldSeries_.baseId == newSeries_.baseId, "Mismatched bases in series");
 
+        _requireRiskOffOk(newSeries_.baseId, vault_.ilkId);
+
         // Set the vault art to zero
         int128 oldArt = balances_.art.i128();
         balances_ = _pour(vaultId, vault_, balances_, oldSeries_, 0, -oldArt);
@@ -413,7 +428,7 @@ contract Cauldron is AccessControl, Constants {
         // Set the vault art to it's newSeries value by adding `art` to that from the old series
         balances_ = _pour(vaultId, vault_, balances_, newSeries_, 0, oldArt + art);
 
-        require(_level(vault_, balances_, newSeries_) >= 0, "Undercollateralized");
+        require(_level(vault_, balances_, newSeries_, false) >= 0, "Undercollateralized");
         emit VaultRolled(vaultId, newSeriesId, balances_.art);
 
         return (vault_, balances_);
@@ -428,7 +443,7 @@ contract Cauldron is AccessControl, Constants {
     {
         (DataTypes.Vault memory vault_, DataTypes.Series memory series_, DataTypes.Balances memory balances_) = vaultData(vaultId, true);
 
-        return _level(vault_, balances_, series_);
+        return _level(vault_, balances_, series_, true);
     }
 
     /// @dev Record the borrowing rate at maturity for a series
@@ -481,14 +496,15 @@ contract Cauldron is AccessControl, Constants {
     function _level(
         DataTypes.Vault memory vault_,
         DataTypes.Balances memory balances_,
-        DataTypes.Series memory series_
+        DataTypes.Series memory series_,
+        bool liquidation
     )
         internal
         returns (int256)
     {
         DataTypes.SpotOracle memory spotOracle_ = spotOracles[series_.baseId][vault_.ilkId];
         uint256 ratio = uint256(spotOracle_.ratio) * 1e12;   // Normalized to 18 decimals
-        (uint256 inkValue,) = spotOracle_.oracle.get(vault_.ilkId, series_.baseId, balances_.ink);    // ink * spot
+        (uint256 inkValue,) = _spotValue(spotOracle_.oracle, vault_.ilkId, series_.baseId, balances_.ink, liquidation);    // ink * spot
 
         if (uint32(block.timestamp) >= series_.maturity) {
             uint256 accrual_ = _accrual(vault_.seriesId, series_);
@@ -496,5 +512,38 @@ contract Cauldron is AccessControl, Constants {
         }
 
         return inkValue.i256() - uint256(balances_.art).wmul(ratio).i256();
+    }
+
+    function _spotValue(
+        IOracle oracle,
+        bytes6 baseId,
+        bytes6 quoteId,
+        uint256 amount,
+        bool liquidation
+    ) private returns (uint256 value, uint256 updateTime) {
+        if (liquidation) {
+            try ILiquidationOracle(address(oracle)).getLiquidation(baseId, quoteId, amount) returns (
+                uint256 liqValue,
+                uint256 liqTime
+            ) {
+                return (liqValue, liqTime);
+            } catch {}
+        }
+
+        return oracle.get(baseId, quoteId, amount);
+    }
+
+    function _requireRiskOffOk(bytes6 baseId, bytes6 ilkId) private {
+        DataTypes.SpotOracle memory spotOracle_ = spotOracles[baseId][ilkId];
+        if (address(spotOracle_.oracle) == address(0)) return;
+
+        try IRiskOracle(address(spotOracle_.oracle)).updateRiskOff() {
+        } catch {
+            return;
+        }
+
+        try IRiskOracle(address(spotOracle_.oracle)).riskOff() returns (bool isRiskOff) {
+            require(!isRiskOff, "RISK_OFF");
+        } catch {}
     }
 }

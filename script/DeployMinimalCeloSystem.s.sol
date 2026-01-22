@@ -9,6 +9,7 @@ import "../src/Witch.sol";
 import "../src/FYToken.sol";
 import "../src/oracles/mento/MentoSpotOracle.sol";
 import "../src/oracles/mento/ISortedOracles.sol";
+import "../src/oracles/chainlink/AggregatorV3Interface.sol";
 import "@yield-protocol/utils-v2/src/interfaces/IWETH9.sol";
 
 /**
@@ -43,6 +44,7 @@ contract DeployMinimalCeloSystem is Script {
     // Mento protocol addresses
     address constant MENTO_SORTED_ORACLES = 0xefB84935239dAcdecF7c5bA76d8dE40b077B7b33;
     address constant MENTO_KES_USD_FEED = 0xbAcEE37d31b9f022Ef5d232B9fD53F05a531c169;
+    address constant USDT_USD_FEED = 0x5e37AF40A7A344ec9b03CCD34a250F3dA9a20B02;
 
     // Asset IDs (6 bytes)
     bytes6 constant CKES_ID = 0x634b45530000; // "cKES\0\0" - BASE ASSET
@@ -94,7 +96,10 @@ contract DeployMinimalCeloSystem is Script {
 
         // Deploy MentoSpotOracle
         // Returns: cKES per USDT (≈ cKES/USD), scaled to 1e18
-        mentoOracle = new MentoSpotOracle(ISortedOracles(MENTO_SORTED_ORACLES));
+        mentoOracle = new MentoSpotOracle(
+            ISortedOracles(MENTO_SORTED_ORACLES),
+            AggregatorV3Interface(USDT_USD_FEED)
+        );
 
         // ============================================================
         // STEP 3: Deploy Join Contracts

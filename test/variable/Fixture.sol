@@ -326,20 +326,20 @@ abstract contract Fixture is Test, TestConstants, TestExtensions {
         int128 art,
         bytes12 vault
     ) internal returns (bool) {
-        (, bytes6 baseId, bytes6 ilkId) = cauldron.vaults(vault);
+        (, bytes6 vaultBaseId, bytes6 vaultIlkId) = cauldron.vaults(vault);
 
-        (IOracle oracle, uint32 ratio1) = cauldron.spotOracles(baseId, ilkId);
+        (IOracle oracle, uint32 ratio1) = cauldron.spotOracles(vaultBaseId, vaultIlkId);
         uint256 ratio = uint256(ratio1) * 1e12; // Normalized to 18 decimals
-        (uint256 inkValue, ) = oracle.get(ilkId, baseId, uint256(int(ink))); // ink * spot
-        uint256 baseValue = cauldron.debtToBase(baseId, uint128(art));
+        (uint256 inkValue, ) = oracle.get(vaultIlkId, vaultBaseId, uint256(int(ink))); // ink * spot
+        uint256 baseValue = cauldron.debtToBase(vaultBaseId, uint128(art));
         return inkValue.i256() - baseValue.wmul(ratio).i256() >= 0;
     }
 
     function giveMeDustAndLine(
         bytes12 vault
     ) internal view returns (uint128 dust, uint128 line) {
-        (, bytes6 baseId, bytes6 ilkId) = cauldron.vaults(vault);
-        (uint96 max, uint24 min, uint8 dec, ) = cauldron.debt(baseId, ilkId);
+        (, bytes6 vaultBaseId, bytes6 vaultIlkId) = cauldron.vaults(vault);
+        (uint96 max, uint24 min, uint8 dec, ) = cauldron.debt(vaultBaseId, vaultIlkId);
         dust = min * uint128(10) ** dec;
         line = max * uint128(10) ** dec;
     }

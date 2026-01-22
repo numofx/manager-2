@@ -42,6 +42,7 @@ WCELO="0x471EcE3750Da237f93B8E339c536989b8978a438"
 CKES="0x456a3D042C0DbD3db53D5489e98dFb038553B0d0"
 USDT="0x48065fbBE25f71C9282ddf5e1cD6D6A887483D5e"
 MENTO_SORTED_ORACLES="0xefB84935239dAcdecF7c5bA76d8dE40b077B7b33"
+USDT_USD_FEED="0x5e37AF40A7A344ec9b03CCD34a250F3dA9a20B02"
 
 echo "Step 1: Deploying Cauldron..."
 CAULDRON_ADDRESS=$(forge create src/Cauldron.sol:Cauldron \
@@ -73,7 +74,7 @@ echo "Step 4: Deploying MentoSpotOracle..."
 MENTO_ORACLE_ADDRESS=$(forge create src/oracles/mento/MentoSpotOracle.sol:MentoSpotOracle \
     --rpc-url $CELO_RPC \
     --private-key $PRIVATE_KEY \
-    --constructor-args $MENTO_SORTED_ORACLES \
+    --constructor-args $MENTO_SORTED_ORACLES $USDT_USD_FEED \
     --json | jq -r '.deployedTo')
 echo "MentoSpotOracle deployed at: $MENTO_ORACLE_ADDRESS"
 echo ""

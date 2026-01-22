@@ -2,6 +2,8 @@
 pragma solidity >=0.8.13;
 import "../constants/Constants.sol";
 import "../interfaces/IOracle.sol";
+import "../interfaces/ILiquidationOracle.sol";
+import "../interfaces/IRiskOracle.sol";
 import "../interfaces/DataTypes.sol";
 import "@yield-protocol/utils-v2/src/access/AccessControl.sol";
 import "@yield-protocol/utils-v2/src/utils/Math.sol";
@@ -340,6 +342,13 @@ contract VRCauldron is UUPSUpgradeable, AccessControl, Constants {
             DataTypes.Balances memory balancesTo
         ) = vaultData(to);
 
+        if (ink > 0 && balancesFrom.art > 0) {
+            _requireRiskOffOk(vaultFrom.baseId, vaultFrom.ilkId);
+        }
+        if (art > 0) {
+            _requireRiskOffOk(vaultTo.baseId, vaultTo.ilkId);
+        }
+
         if (ink > 0) {
             require(vaultFrom.ilkId == vaultTo.ilkId, "Different collateral");
             balancesFrom.ink -= ink;
@@ -367,12 +376,12 @@ contract VRCauldron is UUPSUpgradeable, AccessControl, Constants {
 
         if (ink > 0)
             require(
-                _level(vaultFrom, balancesFrom) >= 0,
+                _level(vaultFrom, balancesFrom, false) >= 0,
                 "Undercollateralized at origin"
             );
         if (art > 0)
             require(
-                _level(vaultTo, balancesTo) >= 0,
+                _level(vaultTo, balancesTo, false) >= 0,
                 "Undercollateralized at destination"
             );
 
@@ -434,11 +443,15 @@ contract VRCauldron is UUPSUpgradeable, AccessControl, Constants {
                 ? _debtFromBase(vault_.baseId, base.u128()).i128()
                 : -_debtFromBase(vault_.baseId, (-base).u128()).i128();
 
+        if (art > 0 || (ink < 0 && balances_.art > 0)) {
+            _requireRiskOffOk(vault_.baseId, vault_.ilkId);
+        }
+
         balances_ = _pour(vaultId, vault_, balances_, ink, art);
 
         if (balances_.art > 0 && (ink < 0 || art > 0))
             // If there is debt and we are less safe
-            require(_level(vault_, balances_) >= 0, "Undercollateralized");
+            require(_level(vault_, balances_, false) >= 0, "Undercollateralized");
         return balances_;
     }
 
@@ -471,24 +484,60 @@ contract VRCauldron is UUPSUpgradeable, AccessControl, Constants {
             DataTypes.Balances memory balances_
         ) = vaultData(vaultId);
 
-        return _level(vault_, balances_);
+        return _level(vault_, balances_, true);
     }
 
     /// @dev Return the collateralization level of a vault. It will be negative if undercollateralized.
     function _level(
         VRDataTypes.Vault memory vault_,
-        DataTypes.Balances memory balances_
+        DataTypes.Balances memory balances_,
+        bool liquidation
     ) internal returns (int256) {
         DataTypes.SpotOracle memory spotOracle_ = spotOracles[vault_.baseId][
             vault_.ilkId
         ];
         uint256 ratio = uint256(spotOracle_.ratio) * 1e12; // Normalized to 18 decimals
-        (uint256 inkValue, ) = spotOracle_.oracle.get(
+        (uint256 inkValue, ) = _spotValue(
+            spotOracle_.oracle,
             vault_.ilkId,
             vault_.baseId,
-            balances_.ink
+            balances_.ink,
+            liquidation
         ); // ink * spot
         uint256 baseValue = _debtToBase(vault_.baseId, balances_.art); // art * rate
         return inkValue.i256() - baseValue.wmul(ratio).i256();
+    }
+
+    function _spotValue(
+        IOracle oracle,
+        bytes6 baseId,
+        bytes6 quoteId,
+        uint256 amount,
+        bool liquidation
+    ) private returns (uint256 value, uint256 updateTime) {
+        if (liquidation) {
+            try ILiquidationOracle(address(oracle)).getLiquidation(baseId, quoteId, amount) returns (
+                uint256 liqValue,
+                uint256 liqTime
+            ) {
+                return (liqValue, liqTime);
+            } catch {}
+        }
+
+        return oracle.get(baseId, quoteId, amount);
+    }
+
+    function _requireRiskOffOk(bytes6 baseId, bytes6 ilkId) private {
+        DataTypes.SpotOracle memory spotOracle_ = spotOracles[baseId][ilkId];
+        if (address(spotOracle_.oracle) == address(0)) return;
+
+        try IRiskOracle(address(spotOracle_.oracle)).updateRiskOff() {
+        } catch {
+            return;
+        }
+
+        try IRiskOracle(address(spotOracle_.oracle)).riskOff() returns (bool isRiskOff) {
+            require(!isRiskOff, "RISK_OFF");
+        } catch {}
     }
 }
