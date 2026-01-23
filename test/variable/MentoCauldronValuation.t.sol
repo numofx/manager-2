@@ -69,6 +69,8 @@ contract MentoCauldronValuationTest is Test, TestConstants {
 
         mentoOracle.grantRole(MentoSpotOracle.addSource.selector, address(this));
         mentoOracle.addSource(USDT_ID, CKES_ID, KES_USD_FEED, MAX_AGE, 0);
+        _setUsdtUsdPrice(100_000_000); // 1.0 with 8 decimals
+        _setMentoRate(1e22); // USD/KES = 0.01 => 100 cKES/USD
         cauldron.setSpotOracle(CKES_ID, USDT_ID, IOracle(address(mentoOracle)), COLLATERAL_RATIO);
 
         bytes6[] memory ilks = new bytes6[](1);
@@ -78,8 +80,6 @@ contract MentoCauldronValuationTest is Test, TestConstants {
 
         cauldron.build(address(this), VAULT_ID, CKES_ID, USDT_ID);
 
-        _setUsdtUsdPrice(100_000_000); // 1.0 with 8 decimals
-        _setMentoRate(1e22); // USD/KES = 0.01 => 100 cKES/USD
     }
 
     function testCollateralValueMonotonicityOnWeakeningKES() public {

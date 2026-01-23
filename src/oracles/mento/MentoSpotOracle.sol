@@ -63,7 +63,6 @@ contract MentoSpotOracle is IOracle, ILiquidationOracle, IRiskOracle, AccessCont
     uint256 public riskOffHi = 1.03e18;
 
     bool public riskOff;
-    uint8 public inBandCount;
     uint80 public lastRoundId;
 
     enum Use {
@@ -228,7 +227,6 @@ contract MentoSpotOracle is IOracle, ILiquidationOracle, IRiskOracle, AccessCont
 
         if (!ok) {
             riskOff = true;
-            inBandCount = 0;
             return;
         }
 
@@ -242,14 +240,9 @@ contract MentoSpotOracle is IOracle, ILiquidationOracle, IRiskOracle, AccessCont
             : (peg > riskOffLo ? peg - riskOffLo : 0);
 
         if (diff <= allowed) {
-            if (inBandCount < 3) inBandCount++;
-            if (riskOff && inBandCount >= 3) {
-                riskOff = false;
-                inBandCount = 3;
-            }
+            riskOff = false;
         } else {
             riskOff = true;
-            inBandCount = 0;
         }
     }
 

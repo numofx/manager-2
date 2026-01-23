@@ -108,6 +108,8 @@ contract Cauldron is AccessControl, Constants {
     {
         require (assets[baseId] != address(0), "Base not found");
         require (assets[ilkId] != address(0), "Ilk not found");
+        require (address(oracle) != address(0), "Oracle cannot be zero");
+        _requireLiquidationSource(oracle, baseId, ilkId);
         spotOracles[baseId][ilkId] = DataTypes.SpotOracle({
             oracle: oracle,
             ratio: ratio                                                                    // With 6 decimals. 1000000 == 100%
@@ -152,6 +154,23 @@ contract Cauldron is AccessControl, Constants {
             require(value != 0, "Missing RATE source");
         } catch (bytes memory reason) {
             if (reason.length == 0) revert("Missing RATE source");
+            assembly {
+                revert(add(reason, 32), mload(reason))
+            }
+        }
+    }
+
+    function _requireLiquidationSource(
+        IOracle oracle,
+        bytes6 baseId,
+        bytes6 ilkId
+    ) private {
+        try ILiquidationOracle(address(oracle)).getLiquidation(ilkId, baseId, 1) returns (
+            uint256,
+            uint256
+        ) {
+        } catch (bytes memory reason) {
+            if (reason.length == 0) revert("Missing LIQUIDATION source");
             assembly {
                 revert(add(reason, 32), mload(reason))
             }
@@ -553,12 +572,7 @@ contract Cauldron is AccessControl, Constants {
         bool liquidation
     ) private returns (uint256 value, uint256 updateTime) {
         if (liquidation) {
-            try ILiquidationOracle(address(oracle)).getLiquidation(baseId, quoteId, amount) returns (
-                uint256 liqValue,
-                uint256 liqTime
-            ) {
-                return (liqValue, liqTime);
-            } catch {}
+            return ILiquidationOracle(address(oracle)).getLiquidation(baseId, quoteId, amount);
         }
 
         return oracle.get(baseId, quoteId, amount);
@@ -566,15 +580,10 @@ contract Cauldron is AccessControl, Constants {
 
     function _requireRiskOffOk(bytes6 baseId, bytes6 ilkId) private {
         DataTypes.SpotOracle memory spotOracle_ = spotOracles[baseId][ilkId];
-        if (address(spotOracle_.oracle) == address(0)) return;
-
-        try IRiskOracle(address(spotOracle_.oracle)).updateRiskOff() {
-        } catch {
-            return;
-        }
-
-        try IRiskOracle(address(spotOracle_.oracle)).riskOff() returns (bool isRiskOff) {
-            require(!isRiskOff, "RISK_OFF");
-        } catch {}
+        require (address(spotOracle_.oracle) != address(0), "Spot oracle not found");
+        IRiskOracle ro = IRiskOracle(address(spotOracle_.oracle));
+        ro.updateRiskOff();
+        bool isRiskOff = ro.riskOff();
+        require(!isRiskOff, "RISK_OFF");
     }
 }

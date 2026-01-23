@@ -5,6 +5,8 @@ import "@yield-protocol/utils-v2/src/access/AccessControl.sol";
 import "@yield-protocol/utils-v2/src/utils/Cast.sol";
 import "@yield-protocol/utils-v2/src/token/IERC20Metadata.sol";
 import "../../interfaces/IOracle.sol";
+import "../../interfaces/ILiquidationOracle.sol";
+import "../../interfaces/IRiskOracle.sol";
 import "../../constants/Constants.sol";
 import "./AggregatorV3Interface.sol";
 
@@ -13,7 +15,7 @@ import "./AggregatorV3Interface.sol";
  * @title ChainlinkMultiOracle
  * @notice Chainlink only uses USD or ETH as a quote in the aggregators, and we will use only ETH
  */
-contract ChainlinkMultiOracle is IOracle, AccessControl, Constants {
+contract ChainlinkMultiOracle is IOracle, ILiquidationOracle, IRiskOracle, AccessControl, Constants {
     using Cast for bytes32;
 
     event SourceSet(bytes6 indexed baseId, IERC20Metadata base, bytes6 indexed quoteId, IERC20Metadata quote, address indexed source);
@@ -72,6 +74,37 @@ contract ChainlinkMultiOracle is IOracle, AccessControl, Constants {
             (amountQuote, updateTime) = _peek(baseId.b6(), quoteId.b6(), amountBase);
         else
             (amountQuote, updateTime) = _peekThroughETH(baseId.b6(), quoteId.b6(), amountBase);
+    }
+
+    function peekLiquidation(bytes32 baseId, bytes32 quoteId, uint256 amountBase)
+        external
+        view
+        override
+        returns (uint256 amountQuote, uint256 updateTime)
+    {
+        if (baseId == quoteId) return (amountBase, block.timestamp);
+        if (baseId == ETH || quoteId == ETH)
+            (amountQuote, updateTime) = _peek(baseId.b6(), quoteId.b6(), amountBase);
+        else
+            (amountQuote, updateTime) = _peekThroughETH(baseId.b6(), quoteId.b6(), amountBase);
+    }
+
+    function getLiquidation(bytes32 baseId, bytes32 quoteId, uint256 amountBase)
+        external
+        override
+        returns (uint256 amountQuote, uint256 updateTime)
+    {
+        if (baseId == quoteId) return (amountBase, block.timestamp);
+        if (baseId == ETH || quoteId == ETH)
+            (amountQuote, updateTime) = _peek(baseId.b6(), quoteId.b6(), amountBase);
+        else
+            (amountQuote, updateTime) = _peekThroughETH(baseId.b6(), quoteId.b6(), amountBase);
+    }
+
+    function updateRiskOff() external override {}
+
+    function riskOff() external pure override returns (bool) {
+        return false;
     }
 
     /// @dev Convert amountBase base into quote at the latest oracle price.

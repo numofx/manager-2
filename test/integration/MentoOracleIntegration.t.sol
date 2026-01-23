@@ -218,7 +218,8 @@ contract MentoOracleIntegrationTest is Test, TestConstants {
         mentoOracle.grantRole(MentoSpotOracle.addSource.selector, address(this));
         mentoOracle.grantRole(MentoSpotOracle.setBounds.selector, address(this));
         mentoOracle.addSource(USDT_ID, CKES_ID, KES_USD_FEED, MAX_AGE, 0);
-
+        _setUsdtUsdSpot(100_000_000);
+        _setMentoRateFromInvertedRate(100e18);
         cauldron.setSpotOracle(CKES_ID, USDT_ID, IOracle(address(mentoOracle)), COLLATERAL_RATIO);
         bytes6[] memory ilks = new bytes6[](1);
         ilks[0] = USDT_ID;
@@ -227,8 +228,6 @@ contract MentoOracleIntegrationTest is Test, TestConstants {
 
         cauldron.build(address(this), VAULT_ID, CKES_ID, USDT_ID);
 
-        _setUsdtUsdSpot(100_000_000);
-        _setMentoRateFromInvertedRate(100e18);
     }
 
     function testSpotBoundaryOneWeiFlip() public {
@@ -334,6 +333,7 @@ contract MentoOracleIntegrationTest is Test, TestConstants {
     }
 
     function testDecimalsRevertCausesRiskOff() public {
+        _setUsdtUsdSpot(100_000_000);
         ChainlinkAggregatorV3MockDecimalsRevert feed = new ChainlinkAggregatorV3MockDecimalsRevert();
         MentoSpotOracle oracle = new MentoSpotOracle(
             ISortedOracles(address(sortedOraclesMock)),
@@ -342,14 +342,12 @@ contract MentoOracleIntegrationTest is Test, TestConstants {
         oracle.grantRole(MentoSpotOracle.addSource.selector, address(this));
         oracle.addSource(USDT_ID, CKES_ID, KES_USD_FEED, MAX_AGE, 0);
 
+        vm.expectRevert("USDT/USD invalid");
         cauldron.setSpotOracle(CKES_ID, USDT_ID, IOracle(address(oracle)), COLLATERAL_RATIO);
-
-        cauldron.pour(VAULT_ID, int128(uint128(10e18)), 0);
-        _expectRiskOffRevert();
-        cauldron.pour(VAULT_ID, 0, int128(int256(1e18)));
     }
 
     function testDecimalsHighCausesRiskOff() public {
+        _setUsdtUsdSpot(100_000_000);
         ChainlinkAggregatorV3MockDecimalsHigh feed = new ChainlinkAggregatorV3MockDecimalsHigh(19);
         MentoSpotOracle oracle = new MentoSpotOracle(
             ISortedOracles(address(sortedOraclesMock)),
@@ -358,11 +356,8 @@ contract MentoOracleIntegrationTest is Test, TestConstants {
         oracle.grantRole(MentoSpotOracle.addSource.selector, address(this));
         oracle.addSource(USDT_ID, CKES_ID, KES_USD_FEED, MAX_AGE, 0);
 
+        vm.expectRevert("USDT/USD invalid");
         cauldron.setSpotOracle(CKES_ID, USDT_ID, IOracle(address(oracle)), COLLATERAL_RATIO);
-
-        cauldron.pour(VAULT_ID, int128(uint128(10e18)), 0);
-        _expectRiskOffRevert();
-        cauldron.pour(VAULT_ID, 0, int128(int256(1e18)));
     }
 
     function testPremiumCapBoundaries() public {
@@ -388,6 +383,7 @@ contract MentoOracleIntegrationTest is Test, TestConstants {
     }
 
     function testEmptyRevertBubblesToRiskOff() public {
+        _setUsdtUsdSpot(100_000_000);
         ChainlinkAggregatorV3MockRevertEmpty feed = new ChainlinkAggregatorV3MockRevertEmpty();
         MentoSpotOracle oracle = new MentoSpotOracle(
             ISortedOracles(address(sortedOraclesMock)),
@@ -396,11 +392,8 @@ contract MentoOracleIntegrationTest is Test, TestConstants {
         oracle.grantRole(MentoSpotOracle.addSource.selector, address(this));
         oracle.addSource(USDT_ID, CKES_ID, KES_USD_FEED, MAX_AGE, 0);
 
+        vm.expectRevert("USDT/USD invalid");
         cauldron.setSpotOracle(CKES_ID, USDT_ID, IOracle(address(oracle)), COLLATERAL_RATIO);
-
-        cauldron.pour(VAULT_ID, int128(uint128(10e18)), 0);
-        _expectRiskOffRevert();
-        cauldron.pour(VAULT_ID, 0, int128(int256(1e18)));
     }
 
     function _setUsdtUsdSpot(uint256 price1e8) internal {

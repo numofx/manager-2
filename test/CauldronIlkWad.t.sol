@@ -5,6 +5,7 @@ import "forge-std/Test.sol";
 import { Cauldron } from "src/Cauldron.sol";
 import { IFYToken } from "src/interfaces/IFYToken.sol";
 import { OracleMock } from "src/mocks/oracles/OracleMock.sol";
+import { RateOracleMock } from "src/mocks/oracles/RateOracleMock.sol";
 import { ERC20Mock } from "src/mocks/ERC20Mock.sol";
 import { USDCMock } from "src/mocks/USDCMock.sol";
 
@@ -21,7 +22,7 @@ contract FYTokenMock {
 contract CauldronIlkWadTest is Test {
     Cauldron private cauldron;
     OracleMock private spotOracle;
-    OracleMock private rateOracle;
+    RateOracleMock private rateOracle;
 
     bytes6 private constant BASE_ID = 0x424153450000; // "BASE"
     bytes6 private constant USDT_ID = 0x555344540000; // "USDT"
@@ -34,7 +35,7 @@ contract CauldronIlkWadTest is Test {
     function setUp() public {
         cauldron = new Cauldron();
         spotOracle = new OracleMock();
-        rateOracle = new OracleMock();
+        rateOracle = new RateOracleMock();
 
         cauldron.grantRole(Cauldron.addAsset.selector, address(this));
         cauldron.grantRole(Cauldron.setLendingOracle.selector, address(this));
@@ -54,13 +55,13 @@ contract CauldronIlkWadTest is Test {
         cauldron.addAsset(USDT_ID, usdt);
         cauldron.addAsset(ILK18_ID, ilk18);
 
+        rateOracle.set(1e18);
         cauldron.setLendingOracle(BASE_ID, rateOracle);
         cauldron.setSpotOracle(BASE_ID, USDT_ID, spotOracle, 1_000_000);
         cauldron.setSpotOracle(BASE_ID, ILK18_ID, spotOracle, 1_000_000);
         cauldron.setIlkToWad(USDT_ID, 1e12);
         cauldron.setIlkToWad(ILK18_ID, 1);
         spotOracle.set(1e18);
-        rateOracle.set(1e18);
 
         FYTokenMock fyToken = new FYTokenMock(base, block.timestamp + 30 days);
         cauldron.addSeries(SERIES_ID, BASE_ID, IFYToken(address(fyToken)));
@@ -82,7 +83,7 @@ contract CauldronIlkWadTest is Test {
     function testAddIlksRevertsWithoutScale() public {
         Cauldron localCauldron = new Cauldron();
         OracleMock localSpot = new OracleMock();
-        OracleMock localRate = new OracleMock();
+        RateOracleMock localRate = new RateOracleMock();
 
         localCauldron.grantRole(Cauldron.addAsset.selector, address(this));
         localCauldron.grantRole(Cauldron.setLendingOracle.selector, address(this));
@@ -95,6 +96,7 @@ contract CauldronIlkWadTest is Test {
         localCauldron.addAsset(BASE_ID, base);
         localCauldron.addAsset(USDT_ID, usdt);
 
+        localRate.set(1e18);
         localCauldron.setLendingOracle(BASE_ID, localRate);
         localCauldron.setSpotOracle(BASE_ID, USDT_ID, localSpot, 1_000_000);
 
