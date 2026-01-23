@@ -19,7 +19,7 @@ contract MentoSpotOracleBasicTest is Test {
     ChainlinkAggregatorV3MockEx public usdtUsdAggregator;
 
     // Asset identifiers
-    bytes6 public constant CKES_ID = 0x634B45530000; // "cKES"
+    bytes6 public constant KESM_ID = 0x634B45530000; // "KESm"
     bytes6 public constant USDT_ID = 0x555344540000; // "USDT"
 
     // Mento feed ID (from Celo mainnet)
@@ -28,8 +28,8 @@ contract MentoSpotOracleBasicTest is Test {
 
     // Test parameters
     uint256 public constant MAX_AGE = 3600; // 1 hour
-    uint256 public constant MIN_PRICE = 66.67e18; // Min cKES per USD
-    uint256 public constant MAX_PRICE = 200e18;   // Max cKES per USD
+    uint256 public constant MIN_PRICE = 66.67e18; // Min KESm per USD
+    uint256 public constant MAX_PRICE = 200e18;   // Max KESm per USD
     uint256 public constant MIN_NUM_RATES = 0;
 
     function setUp() public {
@@ -49,21 +49,21 @@ contract MentoSpotOracleBasicTest is Test {
         oracle.grantRole(oracle.setBounds.selector, address(this));
 
         // Configure oracle source (maxAge is set here)
-        oracle.addSource(USDT_ID, CKES_ID, KES_USD_FEED, MAX_AGE, MIN_NUM_RATES);
+        oracle.addSource(USDT_ID, KESM_ID, KES_USD_FEED, MAX_AGE, MIN_NUM_RATES);
 
         // Set price bounds separately
-        oracle.setBounds(USDT_ID, CKES_ID, MIN_PRICE, MAX_PRICE);
+        oracle.setBounds(USDT_ID, KESM_ID, MIN_PRICE, MAX_PRICE);
 
         usdtUsdAggregator.set(100_000_000);
 
         // Set initial rate: 7.757e21 / 1e24 = 0.007757 USD per KES
-        // Inverted: 1e42 / 7.757e21 = 128.92e18 cKES per USD
+        // Inverted: 1e42 / 7.757e21 = 128.92e18 KESm per USD
         sortedOraclesMock.setMedianRate(KES_USD_FEED, 7.757e21);
     }
 
     function testSourceDirectionMatchesCauldronConvention() public {
-        (address feed,,,,) = oracle.sources(USDT_ID, CKES_ID);
-        assertEq(feed, KES_USD_FEED, "Expected source at [USDT][cKES]");
+        (address feed,,,,) = oracle.sources(USDT_ID, KESM_ID);
+        assertEq(feed, KES_USD_FEED, "Expected source at [USDT][KESm]");
     }
 
     // ========== Critical Staleness Bug Fix Tests ==========
@@ -79,7 +79,7 @@ contract MentoSpotOracleBasicTest is Test {
         // Should succeed with fresh timestamp
         (uint256 value, uint256 updateTime) = oracle.peek(
             bytes32(USDT_ID),
-            bytes32(CKES_ID),
+            bytes32(KESM_ID),
             100e18
         );
 
@@ -100,7 +100,7 @@ contract MentoSpotOracleBasicTest is Test {
         vm.expectRevert("Stale price");
         oracle.peek(
             bytes32(USDT_ID),
-            bytes32(CKES_ID),
+            bytes32(KESM_ID),
             100e18
         );
     }
@@ -118,7 +118,7 @@ contract MentoSpotOracleBasicTest is Test {
         vm.expectRevert("Future timestamp");
         oracle.peek(
             bytes32(USDT_ID),
-            bytes32(CKES_ID),
+            bytes32(KESM_ID),
             100e18
         );
     }
@@ -140,7 +140,7 @@ contract MentoSpotOracleBasicTest is Test {
         vm.expectRevert("Unexpected Mento denominator");
         oracle.peek(
             bytes32(USDT_ID),
-            bytes32(CKES_ID),
+            bytes32(KESM_ID),
             100e18
         );
     }
@@ -149,23 +149,23 @@ contract MentoSpotOracleBasicTest is Test {
 
     /**
      * @notice Test correct price inversion
-     * @dev Verifies: cKES_per_USD = 1e42 / rateNumerator
+     * @dev Verifies: KESm_per_USD = 1e42 / rateNumerator
      */
     function testPriceInversion() public {
         // Set rate: 7.757e21 (USD per KES in 1e24 precision)
         sortedOraclesMock.setMedianRate(KES_USD_FEED, 7.757e21, block.timestamp);
 
-        // Convert 100 USDT to cKES
+        // Convert 100 USDT to KESm
         (uint256 value,) = oracle.peek(
             bytes32(USDT_ID),
-            bytes32(CKES_ID),
+            bytes32(KESM_ID),
             100e18
         );
 
         // Expected: 100 USDT * (1e42 / 7.757e21) / 1e18
         //         = 100 * 128.92e18 / 1e18
-        //         = 12,892e18 cKES
-        assertApproxEqRel(value, 12892e18, 0.01e18, "Inverted price should be ~12,892 cKES");
+        //         = 12,892e18 KESm
+        assertApproxEqRel(value, 12892e18, 0.01e18, "Inverted price should be ~12,892 KESm");
     }
 
     // ========== Bounds Tests ==========
@@ -174,14 +174,14 @@ contract MentoSpotOracleBasicTest is Test {
      * @notice Test that prices below minimum are rejected
      */
     function testMinPriceBound() public {
-        // Set a rate that would give cKES/USD below minimum (66.67e18)
-        // If cKES/USD = 50e18, then USD/KES = 1e42 / 50e18 = 20e21
+        // Set a rate that would give KESm/USD below minimum (66.67e18)
+        // If KESm/USD = 50e18, then USD/KES = 1e42 / 50e18 = 20e21
         sortedOraclesMock.setMedianRate(KES_USD_FEED, 20e21, block.timestamp);
 
         vm.expectRevert("Price below minimum");
         oracle.peek(
             bytes32(USDT_ID),
-            bytes32(CKES_ID),
+            bytes32(KESM_ID),
             100e18
         );
     }
@@ -190,10 +190,10 @@ contract MentoSpotOracleBasicTest is Test {
      * @notice Test that setSource preserves existing sanity bounds
      */
     function testSetSourcePreservesBounds() public {
-        oracle.setSource(USDT_ID, CKES_ID, KES_USD_FEED_ALT, MAX_AGE, MIN_NUM_RATES);
+        oracle.setSource(USDT_ID, KESM_ID, KES_USD_FEED_ALT, MAX_AGE, MIN_NUM_RATES);
 
         (address rateFeedID, uint256 maxAge, uint256 minPrice, uint256 maxPrice, uint256 minNumRates) =
-            oracle.sources(USDT_ID, CKES_ID);
+            oracle.sources(USDT_ID, KESM_ID);
 
         assertEq(rateFeedID, KES_USD_FEED_ALT, "Rate feed should update");
         assertEq(maxAge, MAX_AGE, "Max age should update");
@@ -205,37 +205,37 @@ contract MentoSpotOracleBasicTest is Test {
     function testSetSourceRevertsIfMissing() public {
         bytes6 OTHER_BASE = bytes6("OTHER");
         vm.expectRevert("Source not found");
-        oracle.setSource(OTHER_BASE, CKES_ID, KES_USD_FEED, MAX_AGE, MIN_NUM_RATES);
+        oracle.setSource(OTHER_BASE, KESM_ID, KES_USD_FEED, MAX_AGE, MIN_NUM_RATES);
     }
 
     function testAddSourceRevertsIfExists() public {
         vm.expectRevert("Source already set");
-        oracle.addSource(USDT_ID, CKES_ID, KES_USD_FEED, MAX_AGE, MIN_NUM_RATES);
+        oracle.addSource(USDT_ID, KESM_ID, KES_USD_FEED, MAX_AGE, MIN_NUM_RATES);
     }
 
     // ========== Minimum Reports Tests ==========
 
     function testMinNumRatesRevertsWhenBelow() public {
-        oracle.setSource(USDT_ID, CKES_ID, KES_USD_FEED, MAX_AGE, 2);
+        oracle.setSource(USDT_ID, KESM_ID, KES_USD_FEED, MAX_AGE, 2);
         sortedOraclesMock.setMedianRate(KES_USD_FEED, 7.757e21, block.timestamp);
         sortedOraclesMock.setNumRates(KES_USD_FEED, 1);
 
         vm.expectRevert("Insufficient oracle reports");
         oracle.peek(
             bytes32(USDT_ID),
-            bytes32(CKES_ID),
+            bytes32(KESM_ID),
             100e18
         );
     }
 
     function testMinNumRatesBoundarySucceeds() public {
-        oracle.setSource(USDT_ID, CKES_ID, KES_USD_FEED, MAX_AGE, 2);
+        oracle.setSource(USDT_ID, KESM_ID, KES_USD_FEED, MAX_AGE, 2);
         sortedOraclesMock.setMedianRate(KES_USD_FEED, 7.757e21, block.timestamp);
         sortedOraclesMock.setNumRates(KES_USD_FEED, 2);
 
         (uint256 value,) = oracle.peek(
             bytes32(USDT_ID),
-            bytes32(CKES_ID),
+            bytes32(KESM_ID),
             100e18
         );
         assertGt(value, 0, "Should return valid value at minNumRates");
@@ -247,7 +247,7 @@ contract MentoSpotOracleBasicTest is Test {
 
         (uint256 value,) = oracle.peek(
             bytes32(USDT_ID),
-            bytes32(CKES_ID),
+            bytes32(KESM_ID),
             100e18
         );
         assertGt(value, 0, "Should return value when minNumRates is disabled");
@@ -257,14 +257,14 @@ contract MentoSpotOracleBasicTest is Test {
      * @notice Test that prices above maximum are rejected
      */
     function testMaxPriceBound() public {
-        // Set a rate that would give cKES/USD above maximum (200e18)
-        // If cKES/USD = 250e18, then USD/KES = 1e42 / 250e18 = 4e21
+        // Set a rate that would give KESm/USD above maximum (200e18)
+        // If KESm/USD = 250e18, then USD/KES = 1e42 / 250e18 = 4e21
         sortedOraclesMock.setMedianRate(KES_USD_FEED, 4e21, block.timestamp);
 
         vm.expectRevert("Price above maximum");
         oracle.peek(
             bytes32(USDT_ID),
-            bytes32(CKES_ID),
+            bytes32(KESM_ID),
             100e18
         );
     }
@@ -280,7 +280,7 @@ contract MentoSpotOracleBasicTest is Test {
         vm.expectRevert("Invalid Mento rate: zero");
         oracle.peek(
             bytes32(USDT_ID),
-            bytes32(CKES_ID),
+            bytes32(KESM_ID),
             100e18
         );
     }
@@ -297,17 +297,17 @@ contract MentoSpotOracleBasicTest is Test {
         // Convert various amounts
         (uint256 value1,) = oracle.peek(
             bytes32(USDT_ID),
-            bytes32(CKES_ID),
+            bytes32(KESM_ID),
             1e18 // 1 USDT
         );
-        assertApproxEqRel(value1, 128.92e18, 0.01e18, "1 USDT should give ~128.92 cKES");
+        assertApproxEqRel(value1, 128.92e18, 0.01e18, "1 USDT should give ~128.92 KESm");
 
         (uint256 value2,) = oracle.peek(
             bytes32(USDT_ID),
-            bytes32(CKES_ID),
+            bytes32(KESM_ID),
             1000e18 // 1000 USDT
         );
-        assertApproxEqRel(value2, 128920e18, 0.01e18, "1000 USDT should give ~128,920 cKES");
+        assertApproxEqRel(value2, 128920e18, 0.01e18, "1000 USDT should give ~128,920 KESm");
     }
 
     function testMintBandRevertsOnLowUsdtUsd() public {
@@ -317,7 +317,7 @@ contract MentoSpotOracleBasicTest is Test {
         vm.expectRevert("USDT/USD oob mint");
         oracle.peek(
             bytes32(USDT_ID),
-            bytes32(CKES_ID),
+            bytes32(KESM_ID),
             100e18
         );
     }
@@ -328,12 +328,12 @@ contract MentoSpotOracleBasicTest is Test {
 
         (uint256 mintValue,) = oracle.peek(
             bytes32(USDT_ID),
-            bytes32(CKES_ID),
+            bytes32(KESM_ID),
             100e18
         );
         (uint256 liqValue,) = oracle.peekLiquidation(
             bytes32(USDT_ID),
-            bytes32(CKES_ID),
+            bytes32(KESM_ID),
             100e18
         );
 

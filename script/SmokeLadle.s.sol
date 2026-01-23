@@ -15,7 +15,7 @@ contract SmokeLadle is Script {
         vm.startBroadcast(pk);
 
         (bytes12 vaultId, ) = LADLE.build(SERIES_ID, USDT_ID, 0);
-        // deposit 10 USDT (1e7) and borrow 1 cKES (1e18) as a minimal smoke test
+        // deposit 10 USDT (1e7) and borrow 1 KESm (1e18) as a minimal smoke test
         LADLE.pour(vaultId, msg.sender, int128(uint128(10e6)), int128(uint128(1e18)));
 
         vm.stopBroadcast();

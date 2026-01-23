@@ -13,7 +13,7 @@ forge script script/DeployMinimalCeloSystem.s.sol:DeployMinimalCeloSystem \
 ```
 
 ## Addresses (Celo)
-- cKES: `0x456a3D042C0DbD3db53D5489e98dFb038553B0d0`
+- KESm: `0x456a3D042C0DbD3db53D5489e98dFb038553B0d0`
 - USDT: `0x48065fbBE25f71C9282ddf5e1cD6D6A887483D5e`
 - Cauldron:
  `0xdd3af9ba14bfe164946a898cfb42433d201f5f01`
@@ -24,9 +24,13 @@ forge script script/DeployMinimalCeloSystem.s.sol:DeployMinimalCeloSystem \
 
 - MentoSpotOracle:
  `0xe75c636c4440fa87bb6b3eae6f49a39c15a29f33`
-- cKES Join:
- `0x075d4302978ff779624859e98129e8b166e7dbc0
- (its asset() returns 0x456a3D042C0DbD3db53D5489e98dFb038553B0d0, the cKES token)`
+- KESm token:
+ `0x456a3D042C0DbD3db53D5489e98dFb038553B0d0`
+- KESm Join:
+ `0x075d4302978Ff779624859E98129E8b166e7DbC0`
+ (vault adapter for KESm; allows Ladle/Cauldron to move KESm in/out)
+- KESm assetId:
+ `0x634b45530000`
 - USDT Join:
  `0xb493ee06ee728f468b1d74fb2b335e42bb1b3e27
  (its asset() returns 0x48065fbBE25f71C9282ddf5e1cD6D6A887483D5e, the USDT token)`
@@ -56,5 +60,3 @@ test/
   utils/
   ...
 ```
-
-

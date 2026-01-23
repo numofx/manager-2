@@ -4,12 +4,12 @@ pragma solidity >=0.8.13;
 import "@yield-protocol/utils-v2/src/token/ERC20.sol";
 
 /**
- * @title CKESMock
- * @notice Mock ERC20 token representing cKES (Celo Kenyan Shilling)
+ * @title KESMMock
+ * @notice Mock ERC20 token representing KESm (Celo Kenyan Shilling)
  * @dev 18 decimals, mintable for testing
  */
-contract CKESMock is ERC20 {
-    constructor() ERC20("Celo Kenyan Shilling", "cKES", 18) {}
+contract KESMMock is ERC20 {
+    constructor() ERC20("Celo Kenyan Shilling", "KESm", 18) {}
 
     /**
      * @notice Mint tokens for testing

@@ -57,7 +57,7 @@ contract MentoSpotOracleIntegrationTest is Test {
     SortedOraclesMock public sortedOraclesMock;
     ChainlinkAggregatorV3MockFull public usdtUsdAggregator;
 
-    bytes6 public constant CKES_ID = 0x634B45530000; // "cKES"
+    bytes6 public constant KESM_ID = 0x634B45530000; // "KESm"
     bytes6 public constant USDT_ID = 0x555344540000; // "USDT"
     address public constant KES_USD_FEED = 0xbAcEE37d31b9f022Ef5d232B9fD53F05a531c169;
     uint256 public constant MAX_AGE = 3600;
@@ -74,10 +74,10 @@ contract MentoSpotOracleIntegrationTest is Test {
         );
 
         oracle.grantRole(oracle.addSource.selector, address(this));
-        oracle.addSource(USDT_ID, CKES_ID, KES_USD_FEED, MAX_AGE, 0);
+        oracle.addSource(USDT_ID, KESM_ID, KES_USD_FEED, MAX_AGE, 0);
 
         _setUsdtRound(1, 100_000_000, block.timestamp, 1); // 1.0 USDT/USD
-        _setMentoRate(1e22, block.timestamp); // 0.01 USD/KES -> 100 cKES/USD
+        _setMentoRate(1e22, block.timestamp); // 0.01 USD/KES -> 100 KESm/USD
     }
 
     function _setUsdtRound(
@@ -113,7 +113,7 @@ contract MentoSpotOracleIntegrationTest is Test {
 
         (, uint256 updateTime) = oracle.peek(
             bytes32(USDT_ID),
-            bytes32(CKES_ID),
+            bytes32(KESM_ID),
             1e18
         );
 
@@ -128,14 +128,14 @@ contract MentoSpotOracleIntegrationTest is Test {
         );
 
         localOracle.grantRole(localOracle.addSource.selector, address(this));
-        localOracle.addSource(USDT_ID, CKES_ID, KES_USD_FEED, MAX_AGE, 0);
+        localOracle.addSource(USDT_ID, KESM_ID, KES_USD_FEED, MAX_AGE, 0);
 
         localAggregator.setRoundData(1, 1_000_000, block.timestamp, 1); // 1.0 with 6 decimals
-        _setMentoRate(1e22, block.timestamp); // 100 cKES/USD
+        _setMentoRate(1e22, block.timestamp); // 100 KESm/USD
 
         (uint256 value,) = localOracle.peek(
             bytes32(USDT_ID),
-            bytes32(CKES_ID),
+            bytes32(KESM_ID),
             10e18
         );
 
@@ -147,7 +147,7 @@ contract MentoSpotOracleIntegrationTest is Test {
         _setUsdtRound(2, -1, block.timestamp, 2);
 
         vm.expectRevert("USDT/USD invalid");
-        oracle.peek(bytes32(USDT_ID), bytes32(CKES_ID), 1e18);
+        oracle.peek(bytes32(USDT_ID), bytes32(KESM_ID), 1e18);
     }
 
     function testUsdtUsdInvalidZeroUpdatedAtReverts() public {
@@ -155,7 +155,7 @@ contract MentoSpotOracleIntegrationTest is Test {
         _setUsdtRound(2, 100_000_000, 0, 2);
 
         vm.expectRevert("USDT/USD invalid");
-        oracle.peek(bytes32(USDT_ID), bytes32(CKES_ID), 1e18);
+        oracle.peek(bytes32(USDT_ID), bytes32(KESM_ID), 1e18);
     }
 
     function testUsdtUsdInvalidAnsweredInRoundReverts() public {
@@ -163,7 +163,7 @@ contract MentoSpotOracleIntegrationTest is Test {
         _setUsdtRound(3, 100_000_000, block.timestamp, 2);
 
         vm.expectRevert("USDT/USD invalid");
-        oracle.peek(bytes32(USDT_ID), bytes32(CKES_ID), 1e18);
+        oracle.peek(bytes32(USDT_ID), bytes32(KESM_ID), 1e18);
     }
 
     function testUsdtUsdInvalidFutureTimestampReverts() public {
@@ -171,7 +171,7 @@ contract MentoSpotOracleIntegrationTest is Test {
         _setUsdtRound(2, 100_000_000, block.timestamp + 1, 2);
 
         vm.expectRevert("USDT/USD invalid");
-        oracle.peek(bytes32(USDT_ID), bytes32(CKES_ID), 1e18);
+        oracle.peek(bytes32(USDT_ID), bytes32(KESM_ID), 1e18);
     }
 
     function testUsdtUsdInvalidStaleTimestampReverts() public {
@@ -179,16 +179,16 @@ contract MentoSpotOracleIntegrationTest is Test {
         _setUsdtRound(2, 100_000_000, block.timestamp - (MAX_AGE + 1), 2);
 
         vm.expectRevert("USDT/USD invalid");
-        oracle.peek(bytes32(USDT_ID), bytes32(CKES_ID), 1e18);
+        oracle.peek(bytes32(USDT_ID), bytes32(KESM_ID), 1e18);
     }
 
     function testValueUsesUsdtPremium() public {
-        _setMentoRate(1e22, block.timestamp); // 100 cKES/USD
+        _setMentoRate(1e22, block.timestamp); // 100 KESm/USD
         _setUsdtRound(2, 101_000_000, block.timestamp, 2); // 1.01
 
         (uint256 value,) = oracle.peek(
             bytes32(USDT_ID),
-            bytes32(CKES_ID),
+            bytes32(KESM_ID),
             10e18
         );
 

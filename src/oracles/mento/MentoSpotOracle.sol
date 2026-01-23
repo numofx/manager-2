@@ -13,17 +13,17 @@ import "./ISortedOracles.sol";
 /**
  * @title MentoSpotOracle
  * @notice Oracle adapter for Mento protocol's SortedOracles
- * @dev Returns cKES per USDT (≈ cKES/USD) in 1e18 precision
+ * @dev Returns KESm per USDT (≈ KESm/USD) in 1e18 precision
  *
  * CRITICAL INVERSION LOGIC:
  * - Mento KES/USD feed returns: USD per 1 KES in 1e24 precision
- * - Yield Protocol needs: cKES per 1 USDT in 1e18 precision (for collateral valuation)
- * - This oracle INVERTS the Mento rate: cKES_per_USD = 1e42 / rateNumerator
+ * - Yield Protocol needs: KESm per 1 USDT in 1e18 precision (for collateral valuation)
+ * - This oracle INVERTS the Mento rate: KESm_per_USD = 1e42 / rateNumerator
  *
  * Example:
  * - rateNumerator = 7.3e21, rateDenominator = 1e24 (USD per KES = 7.3e21 / 1e24)
- * - Oracle returns: 1e42 / rateNumerator ≈ 137e18 cKES per USD
- * - Usage: 100 USDT collateral = 100 * 137 = 13,700 cKES equivalent value
+ * - Oracle returns: 1e42 / rateNumerator ≈ 137e18 KESm per USD
+ * - Usage: 100 USDT collateral = 100 * 137 = 13,700 KESm equivalent value
  *
  * Security Features:
  * - Staleness check: maxAge = 3600 seconds (1 hour)
@@ -93,7 +93,7 @@ contract MentoSpotOracle is IOracle, ILiquidationOracle, IRiskOracle, AccessCont
 
     /**
      * @notice Create a price source
-     * @param baseId Yield protocol identifier for base asset (e.g., "cKES")
+     * @param baseId Yield protocol identifier for base asset (e.g., "KESm")
      * @param quoteId Yield protocol identifier for quote asset (e.g., "USDT")
      * @param rateFeedID Mento rate feed identifier (e.g., 0xbAcEE37d31b9f022Ef5d232B9fD53F05a531c169 for KES/USD)
      * @param maxAge_ Maximum age in seconds (e.g., 3600 for 1 hour)
@@ -124,7 +124,7 @@ contract MentoSpotOracle is IOracle, ILiquidationOracle, IRiskOracle, AccessCont
 
     /**
      * @notice Update a price source
-     * @param baseId Yield protocol identifier for base asset (e.g., "cKES")
+     * @param baseId Yield protocol identifier for base asset (e.g., "KESm")
      * @param quoteId Yield protocol identifier for quote asset (e.g., "USDT")
      * @param rateFeedID Mento rate feed identifier (e.g., 0xbAcEE37d31b9f022Ef5d232B9fD53F05a531c169 for KES/USD)
      * @param maxAge_ Maximum age in seconds (e.g., 3600 for 1 hour)
@@ -157,8 +157,8 @@ contract MentoSpotOracle is IOracle, ILiquidationOracle, IRiskOracle, AccessCont
      * @param quoteId Quote asset identifier
      * @param minPrice Minimum acceptable price in 1e18 precision (0 to disable)
      * @param maxPrice Maximum acceptable price in 1e18 precision (0 to disable)
-     * @dev Bounds are for the INVERTED price (cKES per USD)
-     *      If Mento USD/cKES range is [$0.005, $0.015], then cKES/USD range is [66.67, 200]
+     * @dev Bounds are for the INVERTED price (KESm per USD)
+     *      If Mento USD/KESm range is [$0.005, $0.015], then KESm/USD range is [66.67, 200]
      *      In 1e18: minPrice = 66.67e18, maxPrice = 200e18
      */
     function setBounds(bytes6 baseId, bytes6 quoteId, uint256 minPrice, uint256 maxPrice) external auth {
@@ -173,12 +173,12 @@ contract MentoSpotOracle is IOracle, ILiquidationOracle, IRiskOracle, AccessCont
 
     /**
      * @notice Peek at the latest oracle price without state changes
-     * @param base Base asset identifier (e.g., cKES)
+     * @param base Base asset identifier (e.g., KESm)
      * @param quote Quote asset identifier (e.g., USDT)
      * @param amount Amount of quote asset (USDT) to convert, in WAD (1e18)
-     * @return value Equivalent amount in base asset (cKES), in 1e18 precision
+     * @return value Equivalent amount in base asset (KESm), in 1e18 precision
      * @return updateTime Timestamp when the price was last updated
-     * @dev Returns cKES per USDT (≈ cKES/USD), scaled to 1e18
+     * @dev Returns KESm per USDT (≈ KESm/USD), scaled to 1e18
      * @dev CRITICAL: This is a view function - no state changes
      */
     function peek(
@@ -191,12 +191,12 @@ contract MentoSpotOracle is IOracle, ILiquidationOracle, IRiskOracle, AccessCont
 
     /**
      * @notice Get the latest oracle price (same as peek for this oracle)
-     * @param base Base asset identifier (e.g., cKES)
+     * @param base Base asset identifier (e.g., KESm)
      * @param quote Quote asset identifier (e.g., USDT)
      * @param amount Amount of quote asset (USDT) to convert, in WAD (1e18)
-     * @return value Equivalent amount in base asset (cKES), in 1e18 precision
+     * @return value Equivalent amount in base asset (KESm), in 1e18 precision
      * @return updateTime Timestamp when the price was last updated
-     * @dev Returns cKES per USDT (≈ cKES/USD), scaled to 1e18
+     * @dev Returns KESm per USDT (≈ KESm/USD), scaled to 1e18
      */
     function get(
         bytes32 base,
@@ -251,14 +251,14 @@ contract MentoSpotOracle is IOracle, ILiquidationOracle, IRiskOracle, AccessCont
      * @param baseId Base asset identifier (bytes6)
      * @param quoteId Quote asset identifier (bytes6)
      * @param amount Amount to convert (quote asset, e.g., USDT amount), in WAD (1e18)
-     * @return value Converted amount (base asset, e.g., cKES equivalent)
+     * @return value Converted amount (base asset, e.g., KESm equivalent)
      * @return updateTime Price timestamp
      * @dev INVERSION LOGIC:
      *      1. Fetch Mento rate: USD per KES (Fixidity, denominator = 1e24)
      *      2. Invert using full precision:
-     *         cKES_per_USD = (1e18 * 1e24) / rateNumerator = 1e42 / rateNumerator
+     *         KESm_per_USD = (1e18 * 1e24) / rateNumerator = 1e42 / rateNumerator
      *      3. Apply to amount:
-     *         value = (amount * cKES_per_USD) / 1e18
+     *         value = (amount * KESm_per_USD) / 1e18
      */
     function _peek(
         bytes6 baseId,
@@ -296,23 +296,23 @@ contract MentoSpotOracle is IOracle, ILiquidationOracle, IRiskOracle, AccessCont
         require(updateTime <= block.timestamp, "Future timestamp");
         require(block.timestamp - updateTime <= source.maxAge, "Stale price");
 
-        // ========== INVERSION: Convert USD/KES to cKES/USD ==========
+        // ========== INVERSION: Convert USD/KES to KESm/USD ==========
         // Mento returns: rateNumerator / rateDenominator = USD per 1 KES
-        // We need: cKES per 1 USD in 1e18
+        // We need: KESm per 1 USD in 1e18
         //
-        // Formula: cKES_per_USD = (1e18 * rateDenominator) / rateNumerator = 1e42 / rateNumerator
+        // Formula: KESm_per_USD = (1e18 * rateDenominator) / rateNumerator = 1e42 / rateNumerator
         //
         // Example (verified on-chain 2024-12-21):
         // - rateNumerator = 7.757e21
         // - rateDenominator = 1e24
         // - USD_per_KES = 7.757e21 / 1e24 = 0.007757
-        // - invertedRate = 1e42 / 7.757e21 ≈ 128.92e18 (128.92 cKES per USD)
+        // - invertedRate = 1e42 / 7.757e21 ≈ 128.92e18 (128.92 KESm per USD)
         //
         // Division is safe: rateNumerator > 0 (checked above)
         uint256 invertedRate = INVERSION_SCALE / rateNumerator;
 
         // ========== SANITY BOUNDS ==========
-        // Bounds are for inverted price (cKES per USD, 1e18)
+        // Bounds are for inverted price (KESm per USD, 1e18)
         if (source.minPrice > 0) {
             require(invertedRate >= source.minPrice, "Price below minimum");
         }
@@ -323,13 +323,13 @@ contract MentoSpotOracle is IOracle, ILiquidationOracle, IRiskOracle, AccessCont
         (uint256 usdtUsd, , uint256 usdtUpdatedAt) = _usdtUsd1e18(use);
 
         // ========== AMOUNT CONVERSION ==========
-        // Convert quote amount (USDT) to base equivalent (cKES)
+        // Convert quote amount (USDT) to base equivalent (KESm)
         // Formula: value = (amount * rate) / 1e18
         //
         // Example: 100 USDT with rateNumerator = 7.3e21 (rateDenominator = 1e24)
         // - amount = 100e18 (100 USDT in 18 decimals)
         // - invertedRate = 1e42 / rateNumerator ≈ 137e18
-        // - value = (100e18 * 137e18) / 1e18 = 13700e18 (13,700 cKES)
+        // - value = (100e18 * 137e18) / 1e18 = 13700e18 (13,700 KESm)
         value = amount.wmul(invertedRate);
         value = value.wmul(usdtUsd);
 

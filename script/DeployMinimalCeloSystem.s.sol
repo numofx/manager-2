@@ -17,8 +17,8 @@ import "@yield-protocol/utils-v2/src/interfaces/IWETH9.sol";
  * @notice Minimal deployment for Yield Protocol V2 on Celo
  * @dev Configuration:
  *      - Collateral: USDT
- *      - Base (borrow/lend): cKES
- *      - Oracle: Mento SortedOracles (returns cKES per USDT, 1e18)
+ *      - Base (borrow/lend): KESm
+ *      - Oracle: Mento SortedOracles (returns KESm per USDT, 1e18)
  *
  * Usage (Celo Mainnet):
  *   forge script script/DeployMinimalCeloSystem.s.sol:DeployMinimalCeloSystem \
@@ -38,7 +38,7 @@ import "@yield-protocol/utils-v2/src/interfaces/IWETH9.sol";
 contract DeployMinimalCeloSystem is Script {
     // Celo mainnet addresses
     address constant WCELO = 0x471EcE3750Da237f93B8E339c536989b8978a438;
-    address constant CKES = 0x456a3D042C0DbD3db53D5489e98dFb038553B0d0;
+    address constant KESM = 0x456a3D042C0DbD3db53D5489e98dFb038553B0d0;
     address constant USDT = 0x48065fbBE25f71C9282ddf5e1cD6D6A887483D5e;
 
     // Mento protocol addresses
@@ -47,28 +47,28 @@ contract DeployMinimalCeloSystem is Script {
     address constant USDT_USD_FEED = 0x5e37AF40A7A344ec9b03CCD34a250F3dA9a20B02;
 
     // Asset IDs (6 bytes)
-    bytes6 constant CKES_ID = 0x634b45530000; // "cKES\0\0" - BASE ASSET
+    bytes6 constant KESM_ID = 0x634b45530000; // "KESm\0\0" - BASE ASSET
     bytes6 constant USDT_ID = 0x555344540000; // "USDT\0\0" - COLLATERAL
 
     // Oracle configuration
     uint256 constant MAX_AGE = 3600;          // 1 hour staleness limit
-    uint256 constant MIN_PRICE = 66.67e18;    // Min cKES/USD (inverse of $0.015)
-    uint256 constant MAX_PRICE = 200e18;      // Max cKES/USD (inverse of $0.005)
+    uint256 constant MIN_PRICE = 66.67e18;    // Min KESm/USD (inverse of $0.015)
+    uint256 constant MAX_PRICE = 200e18;      // Max KESm/USD (inverse of $0.005)
 
-    // Collateralization: 200% (need $2 USDT collateral per 1 cKES borrowed)
+    // Collateralization: 200% (need $2 USDT collateral per 1 KESm borrowed)
     uint32 constant COLLATERAL_RATIO = 2000000; // 200% in basis points (out of 1M)
 
     // Debt limits
-    uint96 constant MAX_DEBT = 1_000_000e18;  // 1M cKES max debt
+    uint96 constant MAX_DEBT = 1_000_000e18;  // 1M KESm max debt
     uint24 constant MIN_DEBT = 100;           // Minimum debt
-    uint8 constant DEBT_DECIMALS = 18;        // cKES has 18 decimals
+    uint8 constant DEBT_DECIMALS = 18;        // KESm has 18 decimals
 
     // Deployed contracts
     Cauldron public cauldron;
     Ladle public ladle;
     Witch public witch;
     MentoSpotOracle public mentoOracle;
-    Join public ckesJoin;
+    Join public kesmJoin;
     Join public usdtJoin;
 
     function run() external {
@@ -95,7 +95,7 @@ contract DeployMinimalCeloSystem is Script {
         // ============================================================
 
         // Deploy MentoSpotOracle
-        // Returns: cKES per USDT (≈ cKES/USD), scaled to 1e18
+        // Returns: KESm per USDT (≈ KESm/USD), scaled to 1e18
         mentoOracle = new MentoSpotOracle(
             ISortedOracles(MENTO_SORTED_ORACLES),
             AggregatorV3Interface(USDT_USD_FEED)
@@ -105,8 +105,8 @@ contract DeployMinimalCeloSystem is Script {
         // STEP 3: Deploy Join Contracts
         // ============================================================
 
-        // cKES Join (base asset - what you borrow/lend)
-        ckesJoin = new Join(CKES);
+        // KESm Join (base asset - what you borrow/lend)
+        kesmJoin = new Join(KESM);
 
         // USDT Join (collateral - what backs your borrows)
         usdtJoin = new Join(USDT);
@@ -130,13 +130,13 @@ contract DeployMinimalCeloSystem is Script {
         cauldron.grantRole(Cauldron.slurp.selector, address(witch));
 
         // Ladle needs permissions on Joins
-        Join(address(ckesJoin)).grantRole(IJoin.join.selector, address(ladle));
-        Join(address(ckesJoin)).grantRole(IJoin.exit.selector, address(ladle));
+        Join(address(kesmJoin)).grantRole(IJoin.join.selector, address(ladle));
+        Join(address(kesmJoin)).grantRole(IJoin.exit.selector, address(ladle));
         Join(address(usdtJoin)).grantRole(IJoin.join.selector, address(ladle));
         Join(address(usdtJoin)).grantRole(IJoin.exit.selector, address(ladle));
 
         // Witch needs permissions on Joins
-        Join(address(ckesJoin)).grantRole(IJoin.exit.selector, address(witch));
+        Join(address(kesmJoin)).grantRole(IJoin.exit.selector, address(witch));
         Join(address(usdtJoin)).grantRole(IJoin.exit.selector, address(witch));
 
         // ============================================================
@@ -157,51 +157,51 @@ contract DeployMinimalCeloSystem is Script {
         // STEP 6: Add Assets to Cauldron
         // ============================================================
 
-        // cKES is the BASE asset (what you borrow/lend)
-        cauldron.addAsset(CKES_ID, CKES);
+        // KESm is the BASE asset (what you borrow/lend)
+        cauldron.addAsset(KESM_ID, KESM);
 
         // USDT is the COLLATERAL asset (what backs borrows)
         cauldron.addAsset(USDT_ID, USDT);
 
         // Scale collateral to WAD (1e18)
         cauldron.setIlkToWad(USDT_ID, 1e12); // USDT has 6 decimals
-        cauldron.setIlkToWad(CKES_ID, 1); // 18-dec collateral
+        cauldron.setIlkToWad(KESM_ID, 1); // 18-dec collateral
 
         // ============================================================
         // STEP 7: Register Joins with Ladle
         // ============================================================
 
-        ladle.addJoin(CKES_ID, IJoin(address(ckesJoin)));
+        ladle.addJoin(KESM_ID, IJoin(address(kesmJoin)));
         ladle.addJoin(USDT_ID, IJoin(address(usdtJoin)));
 
         // ============================================================
         // STEP 8: Configure Oracle
         // ============================================================
 
-        // Set USDT->cKES source (returns cKES per USDT, 1e18)
+        // Set USDT->KESm source (returns KESm per USDT, 1e18)
         // Uses Mento KES/USD feed with INVERSION
         mentoOracle.addSource(
             USDT_ID,              // base (USDT collateral)
-            CKES_ID,              // quote (cKES base asset)
+            KESM_ID,              // quote (KESm base asset)
             MENTO_KES_USD_FEED,   // Mento feed (returns USD/KES, will be inverted)
             MAX_AGE,              // 3600 seconds staleness limit
             0                     // minNumRates (0 = no minimum enforced)
         );
 
-        // Set sanity bounds for inverted price (cKES per USD)
+        // Set sanity bounds for inverted price (KESm per USD)
         mentoOracle.setBounds(
             USDT_ID,              // base (USDT collateral)
-            CKES_ID,              // quote (cKES base asset)
-            MIN_PRICE,            // 66.67 cKES/USD min
-            MAX_PRICE             // 200 cKES/USD max
+            KESM_ID,              // quote (KESm base asset)
+            MIN_PRICE,            // 66.67 KESm/USD min
+            MAX_PRICE             // 200 KESm/USD max
         );
 
         // Set spot oracle in Cauldron
-        // This enables USDT as collateral for cKES borrowing
+        // This enables USDT as collateral for KESm borrowing
         cauldron.setSpotOracle(
-            CKES_ID,              // base (what you borrow)
+            KESM_ID,              // base (what you borrow)
             USDT_ID,              // ilk (collateral)
-            mentoOracle,          // oracle (returns cKES per USDT)
+            mentoOracle,          // oracle (returns KESm per USDT)
             COLLATERAL_RATIO      // 200% collateralization ratio
         );
 
@@ -209,11 +209,11 @@ contract DeployMinimalCeloSystem is Script {
         // STEP 9: Set Debt Limits
         // ============================================================
 
-        // Set max debt for cKES base with USDT collateral
+        // Set max debt for KESm base with USDT collateral
         cauldron.setDebtLimits(
-            CKES_ID,              // base (cKES)
+            KESM_ID,              // base (KESm)
             USDT_ID,              // ilk (USDT collateral)
-            MAX_DEBT,             // 1M cKES max
+            MAX_DEBT,             // 1M KESm max
             MIN_DEBT,
             DEBT_DECIMALS
         );
@@ -234,7 +234,7 @@ contract DeployMinimalCeloSystem is Script {
         address ladle_,
         address witch_,
         address mentoOracle_,
-        address ckesJoin_,
+        address kesmJoin_,
         address usdtJoin_
     ) {
         return (
@@ -242,7 +242,7 @@ contract DeployMinimalCeloSystem is Script {
             address(ladle),
             address(witch),
             address(mentoOracle),
-            address(ckesJoin),
+            address(kesmJoin),
             address(usdtJoin)
         );
     }

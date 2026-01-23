@@ -1,16 +1,16 @@
 #!/bin/bash
 # Deployment script for Yield Protocol V2 on Celo
 # Configuration:
-#   - Base (borrow/lend): cKES
+#   - Base (borrow/lend): KESm
 #   - Collateral: USDT
-#   - Oracle: Mento (returns cKES per USDT)
+#   - Oracle: Mento (returns KESm per USDT)
 # Run this after setting up your .env file
 
 set -e  # Exit on error
 
 echo "========================================"
 echo "Yield Protocol V2 - Celo Deployment"
-echo "Base Asset: cKES (borrow/lend)"
+echo "Base Asset: KESm (borrow/lend)"
 echo "Collateral: USDT"
 echo "========================================"
 echo ""
@@ -39,7 +39,7 @@ echo ""
 
 # Addresses
 WCELO="0x471EcE3750Da237f93B8E339c536989b8978a438"
-CKES="0x456a3D042C0DbD3db53D5489e98dFb038553B0d0"
+KESM="0x456a3D042C0DbD3db53D5489e98dFb038553B0d0"
 USDT="0x48065fbBE25f71C9282ddf5e1cD6D6A887483D5e"
 MENTO_SORTED_ORACLES="0xefB84935239dAcdecF7c5bA76d8dE40b077B7b33"
 USDT_USD_FEED="0x5e37AF40A7A344ec9b03CCD34a250F3dA9a20B02"
@@ -88,13 +88,13 @@ echo "ChainlinkMultiOracle deployed at: $CHAINLINK_ORACLE_ADDRESS"
 echo ""
 
 echo "Step 6: Deploying Join contracts..."
-echo "   6a. Deploying cKES Join (base asset)..."
-CKES_JOIN_ADDRESS=$(forge create src/Join.sol:Join \
+echo "   6a. Deploying KESm Join (base asset)..."
+KESM_JOIN_ADDRESS=$(forge create src/Join.sol:Join \
     --rpc-url $CELO_RPC \
     --private-key $PRIVATE_KEY \
-    --constructor-args $CKES \
+    --constructor-args $KESM \
     --json | jq -r '.deployedTo')
-echo "   cKES Join (BASE) deployed at: $CKES_JOIN_ADDRESS"
+echo "   KESm Join (BASE) deployed at: $KESM_JOIN_ADDRESS"
 
 echo "   6b. Deploying USDT Join (collateral)..."
 USDT_JOIN_ADDRESS=$(forge create src/Join.sol:Join \
@@ -116,16 +116,16 @@ echo "  Ladle: $LADLE_ADDRESS"
 echo "  Witch: $WITCH_ADDRESS"
 echo ""
 echo "Oracles:"
-echo "  MentoSpotOracle (cKES/USDT): $MENTO_ORACLE_ADDRESS"
+echo "  MentoSpotOracle (KESm/USDT): $MENTO_ORACLE_ADDRESS"
 echo ""
 echo "Join Contracts:"
-echo "  cKES Join (BASE): $CKES_JOIN_ADDRESS"
+echo "  KESm Join (BASE): $KESM_JOIN_ADDRESS"
 echo "  USDT Join (COLLATERAL): $USDT_JOIN_ADDRESS"
 echo ""
 echo "Configuration:"
-echo "  Base Asset: cKES (what you borrow/lend)"
+echo "  Base Asset: KESm (what you borrow/lend)"
 echo "  Collateral: USDT (what backs your borrows)"
-echo "  Oracle Direction: cKES per USDT (1e18)"
+echo "  Oracle Direction: KESm per USDT (1e18)"
 echo ""
 echo "Add these to your .env file:"
 echo "CAULDRON_ADDRESS=$CAULDRON_ADDRESS"
@@ -133,11 +133,11 @@ echo "LADLE_ADDRESS=$LADLE_ADDRESS"
 echo "WITCH_ADDRESS=$WITCH_ADDRESS"
 echo "MENTO_ORACLE_ADDRESS=$MENTO_ORACLE_ADDRESS"
 echo "CHAINLINK_ORACLE_ADDRESS=$CHAINLINK_ORACLE_ADDRESS"
-echo "CKES_JOIN_ADDRESS=$CKES_JOIN_ADDRESS"
+echo "KESM_JOIN_ADDRESS=$KESM_JOIN_ADDRESS"
 echo "USDT_JOIN_ADDRESS=$USDT_JOIN_ADDRESS"
 echo ""
 echo "Next Steps:"
 echo "1. Verify oracle is working: cast call $MENTO_ORACLE_ADDRESS 'peek(bytes32,bytes32,uint256)' ..."
-echo "2. Deploy fyToken series (fycKES) with maturity dates"
+echo "2. Deploy fyToken series (fyKESm) with maturity dates"
 echo "3. Add series to Cauldron and enable USDT as approved collateral (ilk)"
 echo "4. Test vault creation and borrowing on testnet first!"

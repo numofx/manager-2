@@ -13,13 +13,13 @@ import {console2} from "forge-std/console2.sol";
 
 contract AuditTest is Test {
     address public constant USDT_TOKEN = 0x48065fbBE25f71C9282ddf5e1cD6D6A887483D5e;
-    address public constant CKES_TOKEN = 0x456a3D042C0DbD3db53D5489e98dFb038553B0d0;
+    address public constant KESM_TOKEN = 0x456a3D042C0DbD3db53D5489e98dFb038553B0d0;
 
     Cauldron public constant CAULDRON = Cauldron(0xDD3aF9Ba14bFE164946A898CFB42433D201f5f01);
     Ladle public constant LADLE = Ladle(payable(0xF6E0Dc52aa8BF16B908b1bA747a0591c5ad35E2E));
     Join public constant USDT_JOIN = Join(0xB493EE06Ee728F468B1d74fB2B335E42BB1B3E27);
-    Join public constant CKES_JOIN = Join(0x075d4302978Ff779624859E98129E8b166e7DbC0);
-    FYToken public constant FY_CKES = FYToken(0x65AF06b9a00Ac6865CB4f68a543943Aa8504Cdf1);
+    Join public constant KESM_JOIN = Join(0x075d4302978Ff779624859E98129E8b166e7DbC0);
+    FYToken public constant FY_KESM = FYToken(0x65AF06b9a00Ac6865CB4f68a543943Aa8504Cdf1);
 
     bytes6 public constant USDT_ID = 0x555344540000; // "USDT"
     bytes6 public constant SERIES_ID = 0x323641505200; // your series
@@ -50,7 +50,7 @@ contract AuditTest is Test {
         joinRoles[0] = USDT_JOIN.join.selector;
         joinRoles[1] = USDT_JOIN.exit.selector;
         USDT_JOIN.grantRoles(joinRoles, address(LADLE));
-        CKES_JOIN.grantRoles(joinRoles, address(LADLE));
+        KESM_JOIN.grantRoles(joinRoles, address(LADLE));
 
         // --- Build vault via Ladle (this is the user entrypoint) ---
         // Choose an ilkId that is registered for SERIES_ID in your deployed system.
@@ -73,8 +73,8 @@ contract AuditTest is Test {
         );
 
         // Fund base liquidity inside the base join so a borrow can succeed (bypass real flows for POC)
-        deal(CKES_TOKEN, address(CKES_JOIN), 1000e18);
-        vm.store(address(CKES_JOIN), bytes32(uint256(1)), bytes32(uint256(1000e18))); // storedBalance slot
+        deal(KESM_TOKEN, address(KESM_JOIN), 1000e18);
+        vm.store(address(KESM_JOIN), bytes32(uint256(1)), bytes32(uint256(1000e18))); // storedBalance slot
 
         // --- Borrow through Ladle: should fail due to missing FYToken.mint auth ---
         vm.expectRevert("Access denied");
@@ -82,9 +82,9 @@ contract AuditTest is Test {
 
         // --- Fix: grant FYToken mint/burn to Ladle (per-series FYToken) ---
         bytes4[] memory fyRoles = new bytes4[](2);
-        fyRoles[0] = FY_CKES.mint.selector;
-        fyRoles[1] = FY_CKES.burn.selector;
-        FY_CKES.grantRoles(fyRoles, address(LADLE));
+        fyRoles[0] = FY_KESM.mint.selector;
+        fyRoles[1] = FY_KESM.burn.selector;
+        FY_KESM.grantRoles(fyRoles, address(LADLE));
 
         // Try again; if pricing is misconfigured, assert the revert isn't auth-related.
         (bool ok, bytes memory data) = address(LADLE).call(
@@ -92,7 +92,7 @@ contract AuditTest is Test {
         );
         if (ok) {
             // Assert debt tokens minted
-            assertEq(FY_CKES.balanceOf(OWNER), 600e18, "fyToken mint missing");
+            assertEq(FY_KESM.balanceOf(OWNER), 600e18, "fyToken mint missing");
         } else {
             if (_isPanic(data)) revert("panic");
             require(!_isAccessDenied(data), "still access denied");

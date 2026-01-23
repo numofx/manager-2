@@ -17,7 +17,7 @@ import "@yield-protocol/utils-v2/src/token/IERC20Metadata.sol";
 /**
  * @title DeployCelo
  * @notice Deployment script for Yield Protocol V2 core contracts on Celo
- * @dev This script deploys the core system with cKES and USDT support
+ * @dev This script deploys the core system with KESm and USDT support
  *
  * Required environment variables:
  * - PRIVATE_KEY: Deployer private key
@@ -29,7 +29,7 @@ import "@yield-protocol/utils-v2/src/token/IERC20Metadata.sol";
 contract DeployCelo is Script {
     // Celo mainnet addresses
     address constant WCELO = 0x471EcE3750Da237f93B8E339c536989b8978a438;
-    address constant CKES = 0x456a3D042C0DbD3db53D5489e98dFb038553B0d0;
+    address constant KESM = 0x456a3D042C0DbD3db53D5489e98dFb038553B0d0;
     address constant USDT = 0x48065fbBE25f71C9282ddf5e1cD6D6A887483D5e;
 
     // Mento protocol addresses on Celo mainnet
@@ -38,7 +38,7 @@ contract DeployCelo is Script {
     address constant USDT_USD_FEED = 0x5e37AF40A7A344ec9b03CCD34a250F3dA9a20B02;
 
     // Asset IDs (6 bytes)
-    bytes6 constant CKES_ID = 0x634b45530000; // "cKES\0\0"
+    bytes6 constant KESM_ID = 0x634b45530000; // "KESm\0\0"
     bytes6 constant USDT_ID = 0x555344540000; // "USDT\0\0"
     bytes6 constant CELO_ID = 0x43454c4f0000; // "CELO\0\0"
 
@@ -48,7 +48,7 @@ contract DeployCelo is Script {
     Witch public witch;
     MentoSpotOracle public mentoOracle;
     ChainlinkMultiOracle public chainlinkOracle;
-    Join public ckesJoin;
+    Join public kesmJoin;
     Join public usdtJoin;
     Join public celoJoin;
 
@@ -111,9 +111,9 @@ contract DeployCelo is Script {
         // ============================================================
         console.log("5. Deploying Join contracts...");
 
-        console.log("   5a. Deploying cKES Join...");
-        ckesJoin = new Join(CKES);
-        console.log("       cKES Join deployed at:", address(ckesJoin));
+        console.log("   5a. Deploying KESm Join...");
+        kesmJoin = new Join(KESM);
+        console.log("       KESm Join deployed at:", address(kesmJoin));
 
         console.log("   5b. Deploying USDT Join...");
         usdtJoin = new Join(USDT);
@@ -143,12 +143,12 @@ contract DeployCelo is Script {
         console.log("  ChainlinkMultiOracle:", address(chainlinkOracle));
         console.log("");
         console.log("Join Contracts:");
-        console.log("  cKES Join:", address(ckesJoin));
+        console.log("  KESm Join:", address(kesmJoin));
         console.log("  USDT Join:", address(usdtJoin));
         console.log("  CELO Join:", address(celoJoin));
         console.log("");
         console.log("Asset Addresses:");
-        console.log("  cKES:", CKES);
+        console.log("  KESm:", KESM);
         console.log("  USDT:", USDT);
         console.log("  wCELO:", WCELO);
         console.log("");

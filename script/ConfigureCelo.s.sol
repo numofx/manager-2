@@ -23,7 +23,7 @@ import "@yield-protocol/utils-v2/src/token/IERC20Metadata.sol";
  * - WITCH_ADDRESS: Deployed Witch address
  * - MENTO_ORACLE_ADDRESS: Deployed MentoSpotOracle address
  * - CHAINLINK_ORACLE_ADDRESS: Deployed ChainlinkMultiOracle address
- * - CKES_JOIN_ADDRESS: Deployed cKES Join address
+ * - KESM_JOIN_ADDRESS: Deployed KESm Join address
  * - USDT_JOIN_ADDRESS: Deployed USDT Join address
  * - CELO_JOIN_ADDRESS: Deployed CELO Join address
  *
@@ -33,32 +33,32 @@ import "@yield-protocol/utils-v2/src/token/IERC20Metadata.sol";
 contract ConfigureCelo is Script {
     // Asset addresses on Celo mainnet
     address constant WCELO = 0x471EcE3750Da237f93B8E339c536989b8978a438;
-    address constant CKES = 0x456a3D042C0DbD3db53D5489e98dFb038553B0d0;
+    address constant KESM = 0x456a3D042C0DbD3db53D5489e98dFb038553B0d0;
     address constant USDT = 0x48065fbBE25f71C9282ddf5e1cD6D6A887483D5e;
 
     // Mento rate feed IDs on Celo mainnet
     address constant MENTO_KES_USD_FEED = 0xbAcEE37d31b9f022Ef5d232B9fD53F05a531c169;
 
     // Asset IDs (6 bytes)
-    bytes6 constant CKES_ID = 0x634b45530000; // "cKES\0\0"
+    bytes6 constant KESM_ID = 0x634b45530000; // "KESm\0\0"
     bytes6 constant USDT_ID = 0x555344540000; // "USDT\0\0"
     bytes6 constant CELO_ID = 0x43454c4f0000; // "CELO\0\0"
 
     // Oracle configuration
-    // Price bounds for cKES/USD (in 1e18 precision)
+    // Price bounds for KESm/USD (in 1e18 precision)
     // Example: If 1 KES = $0.0073, then bounds might be $0.005 - $0.01
-    uint256 constant CKES_MIN_PRICE = 0.005e18;   // $0.005 per cKES
-    uint256 constant CKES_MAX_PRICE = 0.015e18;   // $0.015 per cKES
-    uint256 constant CKES_MAX_AGE = 1 hours;      // Maximum price staleness
+    uint256 constant KESM_MIN_PRICE = 0.005e18;   // $0.005 per KESm
+    uint256 constant KESM_MAX_PRICE = 0.015e18;   // $0.015 per KESm
+    uint256 constant KESM_MAX_AGE = 1 hours;      // Maximum price staleness
 
     // Collateralization ratios (basis points out of 1,000,000)
     // Example: 150% = 1,500,000 (need $1.50 collateral per $1 borrowed)
     uint32 constant CELO_COLLATERAL_RATIO = 1500000; // 150%
     uint32 constant USDT_COLLATERAL_RATIO = 1200000; // 120%
-    uint32 constant CKES_COLLATERAL_RATIO = 2000000; // 200% (higher due to volatility)
+    uint32 constant KESM_COLLATERAL_RATIO = 2000000; // 200% (higher due to volatility)
 
     // Debt limits
-    uint96 constant MAX_DEBT_CKES_BASE = 1_000_000e18;   // 1M max when cKES is base
+    uint96 constant MAX_DEBT_KESM_BASE = 1_000_000e18;   // 1M max when KESm is base
     uint96 constant MAX_DEBT_USDT_BASE = 10_000_000e6;   // 10M max when USDT is base (6 decimals)
     uint96 constant MAX_DEBT_CELO_BASE = 5_000_000e18;   // 5M max when CELO is base
     uint24 constant MIN_DEBT = 100;                      // Minimum debt amount
@@ -76,7 +76,7 @@ contract ConfigureCelo is Script {
         MentoSpotOracle mentoOracle = MentoSpotOracle(vm.envAddress("MENTO_ORACLE_ADDRESS"));
         ChainlinkMultiOracle chainlinkOracle = ChainlinkMultiOracle(vm.envAddress("CHAINLINK_ORACLE_ADDRESS"));
 
-        IJoin ckesJoin = IJoin(vm.envAddress("CKES_JOIN_ADDRESS"));
+        IJoin kesmJoin = IJoin(vm.envAddress("KESM_JOIN_ADDRESS"));
         IJoin usdtJoin = IJoin(vm.envAddress("USDT_JOIN_ADDRESS"));
         IJoin celoJoin = IJoin(vm.envAddress("CELO_JOIN_ADDRESS"));
 
@@ -133,8 +133,8 @@ contract ConfigureCelo is Script {
 
         // Ladle needs permissions on all Joins
         console.log("   Granting Ladle permissions on Joins...");
-        Join(address(ckesJoin)).grantRole(IJoin.join.selector, address(ladle));
-        Join(address(ckesJoin)).grantRole(IJoin.exit.selector, address(ladle));
+        Join(address(kesmJoin)).grantRole(IJoin.join.selector, address(ladle));
+        Join(address(kesmJoin)).grantRole(IJoin.exit.selector, address(ladle));
         Join(address(usdtJoin)).grantRole(IJoin.join.selector, address(ladle));
         Join(address(usdtJoin)).grantRole(IJoin.exit.selector, address(ladle));
         Join(address(celoJoin)).grantRole(IJoin.join.selector, address(ladle));
@@ -142,7 +142,7 @@ contract ConfigureCelo is Script {
 
         // Witch needs exit permissions on all Joins for liquidations
         console.log("   Granting Witch permissions on Joins...");
-        Join(address(ckesJoin)).grantRole(IJoin.exit.selector, address(witch));
+        Join(address(kesmJoin)).grantRole(IJoin.exit.selector, address(witch));
         Join(address(usdtJoin)).grantRole(IJoin.exit.selector, address(witch));
         Join(address(celoJoin)).grantRole(IJoin.exit.selector, address(witch));
 
@@ -153,8 +153,8 @@ contract ConfigureCelo is Script {
         // Step 3: Add Assets to Cauldron
         // ============================================================
         console.log("3. Adding assets to Cauldron...");
-        cauldron.addAsset(CKES_ID, CKES);
-        console.log("   [OK] Added cKES");
+        cauldron.addAsset(KESM_ID, KESM);
+        console.log("   [OK] Added KESm");
         cauldron.addAsset(USDT_ID, USDT);
         console.log("   [OK] Added USDT");
         cauldron.addAsset(CELO_ID, WCELO);
@@ -166,7 +166,7 @@ contract ConfigureCelo is Script {
         // ============================================================
         console.log("3a. Setting collateral scaling factors...");
         cauldron.setIlkToWad(USDT_ID, 1e12); // USDT has 6 decimals
-        cauldron.setIlkToWad(CKES_ID, 1); // 18-dec collateral
+        cauldron.setIlkToWad(KESM_ID, 1); // 18-dec collateral
         cauldron.setIlkToWad(CELO_ID, 1); // 18-dec collateral
         console.log("   [OK] Collateral scaling configured");
         console.log("");
@@ -175,8 +175,8 @@ contract ConfigureCelo is Script {
         // Step 4: Register Joins with Ladle
         // ============================================================
         console.log("4. Registering Joins with Ladle...");
-        ladle.addJoin(CKES_ID, IJoin(address(ckesJoin)));
-        console.log("   [OK] Registered cKES Join");
+        ladle.addJoin(KESM_ID, IJoin(address(kesmJoin)));
+        console.log("   [OK] Registered KESm Join");
         ladle.addJoin(USDT_ID, IJoin(address(usdtJoin)));
         console.log("   [OK] Registered USDT Join");
         ladle.addJoin(CELO_ID, IJoin(address(celoJoin)));
@@ -184,26 +184,26 @@ contract ConfigureCelo is Script {
         console.log("");
 
         // ============================================================
-        // Step 5: Configure Mento Oracle for USDT->cKES
+        // Step 5: Configure Mento Oracle for USDT->KESm
         // ============================================================
         console.log("5. Configuring Mento Oracle...");
 
-        // Set USDT->cKES price source from Mento (maxAge is set here)
-        console.log("   Setting USDT->cKES source (Mento KES/USD feed)...");
+        // Set USDT->KESm price source from Mento (maxAge is set here)
+        console.log("   Setting USDT->KESm source (Mento KES/USD feed)...");
         mentoOracle.addSource(
             USDT_ID,  // Using USDT as USD proxy
-            CKES_ID,
+            KESM_ID,
             MENTO_KES_USD_FEED,
-            CKES_MAX_AGE, // Max age: 1 hour
+            KESM_MAX_AGE, // Max age: 1 hour
             0             // minNumRates (0 = no minimum enforced)
         );
-        console.log("   [OK] Set USDT->cKES source with staleness check (max age: 1 hour)");
+        console.log("   [OK] Set USDT->KESm source with staleness check (max age: 1 hour)");
 
-        // Set sanity bounds for cKES/USD
-        console.log("   Setting USDT->cKES sanity bounds ($0.005 - $0.015)...");
-        mentoOracle.setBounds(USDT_ID, CKES_ID, CKES_MIN_PRICE, CKES_MAX_PRICE);
+        // Set sanity bounds for KESm/USD
+        console.log("   Setting USDT->KESm sanity bounds ($0.005 - $0.015)...");
+        mentoOracle.setBounds(USDT_ID, KESM_ID, KESM_MIN_PRICE, KESM_MAX_PRICE);
 
-        console.log("   [OK] Mento Oracle configured for USDT->cKES");
+        console.log("   [OK] Mento Oracle configured for USDT->KESm");
         console.log("");
 
         // ============================================================
@@ -211,13 +211,13 @@ contract ConfigureCelo is Script {
         // ============================================================
         console.log("6. Setting spot oracles in Cauldron...");
 
-        // Set USDT/cKES spot oracle (for cKES collateral, USDT base)
-        console.log("   Setting USDT/cKES spot oracle (200% ratio)...");
+        // Set USDT/KESm spot oracle (for KESm collateral, USDT base)
+        console.log("   Setting USDT/KESm spot oracle (200% ratio)...");
         cauldron.setSpotOracle(
             USDT_ID,              // base (what you borrow)
-            CKES_ID,              // ilk (collateral)
+            KESM_ID,              // ilk (collateral)
             mentoOracle,          // oracle
-            CKES_COLLATERAL_RATIO // 200% collateralization
+            KESM_COLLATERAL_RATIO // 200% collateralization
         );
 
         console.log("   [OK] Spot oracles configured");
@@ -229,11 +229,11 @@ contract ConfigureCelo is Script {
         // ============================================================
         console.log("7. Setting debt limits...");
 
-        // Set debt limits for USDT base with cKES collateral
-        console.log("   Setting USDT/cKES debt limits (max: 10M USDT)...");
+        // Set debt limits for USDT base with KESm collateral
+        console.log("   Setting USDT/KESm debt limits (max: 10M USDT)...");
         cauldron.setDebtLimits(
             USDT_ID,              // base
-            CKES_ID,              // ilk (collateral)
+            KESM_ID,              // ilk (collateral)
             MAX_DEBT_USDT_BASE,
             MIN_DEBT,
             DEBT_DECIMALS_6       // USDT has 6 decimals
@@ -267,18 +267,18 @@ contract ConfigureCelo is Script {
         console.log("  [OK] Ladle and Witch can move assets through Joins");
         console.log("");
         console.log("Assets:");
-        console.log("  [OK] cKES (", CKES, ")");
+        console.log("  [OK] KESm (", KESM, ")");
         console.log("  [OK] USDT (", USDT, ")");
         console.log("  [OK] CELO (", WCELO, ")");
         console.log("");
         console.log("Oracles:");
-        console.log("  [OK] USDT->cKES via Mento (KES/USD feed)");
+        console.log("  [OK] USDT->KESm via Mento (KES/USD feed)");
         console.log("    - Max age: 1 hour");
         console.log("    - Bounds: $0.005 - $0.015");
         console.log("    - Collateral ratio: 200%");
         console.log("");
         console.log("Debt Limits:");
-        console.log("  [OK] USDT base / cKES collateral: 10M USDT max");
+        console.log("  [OK] USDT base / KESm collateral: 10M USDT max");
         console.log("");
         console.log("========================================");
         console.log("NEXT STEPS:");

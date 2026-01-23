@@ -112,10 +112,10 @@ if [ "$DIGITS" -lt "23" ]; then
     echo "Inverse: ~$KES_PER_USD KES per 1 USD"
     echo ""
     echo "FOR YIELD PROTOCOL ORACLE:"
-    echo "  ✓ MUST INVERT: cKES_per_USD = 1e42 / mentoRate"
+    echo "  ✓ MUST INVERT: KESm_per_USD = 1e42 / mentoRate"
     echo "  ✓ Output precision: 1e18"
     echo "  ✓ Invert bounds: If USD/KES ∈ [\$0.005, \$0.015]"
-    echo "                   Then cKES/USD ∈ [66.67, 200]"
+    echo "                   Then KESm/USD ∈ [66.67, 200]"
 elif [ "$DIGITS" -gt "25" ]; then
     # Large number (> 1e25) → KES per USD
     echo "FEED_DIRECTION = KES_PER_USD"

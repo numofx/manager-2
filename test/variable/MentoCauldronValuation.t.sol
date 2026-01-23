@@ -26,10 +26,10 @@ contract MentoCauldronValuationTest is Test, TestConstants {
     MentoSpotOracle public mentoOracle;
     SortedOraclesMock public sortedOraclesMock;
     ChainlinkAggregatorV3MockEx public usdtUsdAggregator;
-    ERC20Mock public ckes;
+    ERC20Mock public kesm;
     ERC20Mock public usdt;
 
-    bytes6 public constant CKES_ID = 0x634B45530000; // "cKES"
+    bytes6 public constant KESM_ID = 0x634B45530000; // "KESm"
     bytes6 public constant USDT_ID = 0x555344540000; // "USDT"
     address public constant KES_USD_FEED = address(0xBEEF);
     bytes12 public constant VAULT_ID = 0x000000000000000000000111;
@@ -40,7 +40,7 @@ contract MentoCauldronValuationTest is Test, TestConstants {
     function setUp() public {
         vm.warp(1_000_001);
 
-        ckes = new ERC20Mock("cKES", "cKES");
+        kesm = new ERC20Mock("KESm", "KESm");
         usdt = new ERC20Mock("USDT", "USDT");
 
         VRCauldron impl = new VRCauldron();
@@ -60,25 +60,25 @@ contract MentoCauldronValuationTest is Test, TestConstants {
 
         rateOracle = new AccumulatorMultiOracle();
         rateOracle.grantRole(AccumulatorMultiOracle.setSource.selector, address(this));
-        rateOracle.setSource(CKES_ID, RATE, WAD, WAD);
+        rateOracle.setSource(KESM_ID, RATE, WAD, WAD);
 
-        cauldron.addAsset(CKES_ID, address(ckes));
+        cauldron.addAsset(KESM_ID, address(kesm));
         cauldron.addAsset(USDT_ID, address(usdt));
-        cauldron.setRateOracle(CKES_ID, IOracle(address(rateOracle)));
-        cauldron.addBase(CKES_ID);
+        cauldron.setRateOracle(KESM_ID, IOracle(address(rateOracle)));
+        cauldron.addBase(KESM_ID);
 
         mentoOracle.grantRole(MentoSpotOracle.addSource.selector, address(this));
-        mentoOracle.addSource(USDT_ID, CKES_ID, KES_USD_FEED, MAX_AGE, 0);
+        mentoOracle.addSource(USDT_ID, KESM_ID, KES_USD_FEED, MAX_AGE, 0);
         _setUsdtUsdPrice(100_000_000); // 1.0 with 8 decimals
-        _setMentoRate(1e22); // USD/KES = 0.01 => 100 cKES/USD
-        cauldron.setSpotOracle(CKES_ID, USDT_ID, IOracle(address(mentoOracle)), COLLATERAL_RATIO);
+        _setMentoRate(1e22); // USD/KES = 0.01 => 100 KESm/USD
+        cauldron.setSpotOracle(KESM_ID, USDT_ID, IOracle(address(mentoOracle)), COLLATERAL_RATIO);
 
         bytes6[] memory ilks = new bytes6[](1);
         ilks[0] = USDT_ID;
-        cauldron.addIlks(CKES_ID, ilks);
-        cauldron.setDebtLimits(CKES_ID, USDT_ID, 1_000_000, 0, 18);
+        cauldron.addIlks(KESM_ID, ilks);
+        cauldron.setDebtLimits(KESM_ID, USDT_ID, 1_000_000, 0, 18);
 
-        cauldron.build(address(this), VAULT_ID, CKES_ID, USDT_ID);
+        cauldron.build(address(this), VAULT_ID, KESM_ID, USDT_ID);
 
     }
 
@@ -86,7 +86,7 @@ contract MentoCauldronValuationTest is Test, TestConstants {
         cauldron.pour(VAULT_ID, int128(100e18), 0);
 
         int256 levelStrong = cauldron.level(VAULT_ID);
-        _setMentoRate(2e22); // USD/KES = 0.02 => 50 cKES/USD
+        _setMentoRate(2e22); // USD/KES = 0.02 => 50 KESm/USD
         int256 levelWeak = cauldron.level(VAULT_ID);
 
         assertGt(levelStrong, levelWeak);
@@ -103,8 +103,8 @@ contract MentoCauldronValuationTest is Test, TestConstants {
 
         assertGt(maxStrong, maxWeak);
 
-        uint128 artStrong = cauldron.debtFromBase(CKES_ID, uint128(maxStrong));
-        uint128 artWeak = cauldron.debtFromBase(CKES_ID, uint128(maxWeak));
+        uint128 artStrong = cauldron.debtFromBase(KESM_ID, uint128(maxStrong));
+        uint128 artWeak = cauldron.debtFromBase(KESM_ID, uint128(maxWeak));
         assertGt(artStrong, artWeak);
     }
 
@@ -125,14 +125,14 @@ contract MentoCauldronValuationTest is Test, TestConstants {
         _setUsdtUsdPrice(105_000_000); // 1.05 USDT/USD
 
         (uint128 art, uint128 ink) = cauldron.balances(VAULT_ID);
-        (IOracle oracle, uint32 ratio) = cauldron.spotOracles(CKES_ID, USDT_ID);
+        (IOracle oracle, uint32 ratio) = cauldron.spotOracles(KESM_ID, USDT_ID);
 
-        (uint256 mintValue, ) = oracle.get(USDT_ID, CKES_ID, ink);
-        (uint256 liqValue, ) = ILiquidationOracle(address(oracle)).getLiquidation(USDT_ID, CKES_ID, ink);
+        (uint256 mintValue, ) = oracle.get(USDT_ID, KESM_ID, ink);
+        (uint256 liqValue, ) = ILiquidationOracle(address(oracle)).getLiquidation(USDT_ID, KESM_ID, ink);
         assertGt(mintValue, liqValue);
 
         uint256 ratioNormalized = uint256(ratio) * 1e12;
-        uint256 debtBase = cauldron.debtToBase(CKES_ID, art);
+        uint256 debtBase = cauldron.debtToBase(KESM_ID, art);
         int256 expectedLevel = int256(liqValue) - int256(debtBase.wmul(ratioNormalized));
 
         assertEq(cauldron.level(VAULT_ID), expectedLevel);
@@ -145,7 +145,7 @@ contract MentoCauldronValuationTest is Test, TestConstants {
         _setMentoRate(_toMentoNumerator(rate150));
         _setUsdtUsdPrice(105_000_000); // 1.05 USDT/USD
 
-        (uint256 value150, ) = mentoOracle.get(bytes32(USDT_ID), bytes32(CKES_ID), 1e18);
+        (uint256 value150, ) = mentoOracle.get(bytes32(USDT_ID), bytes32(KESM_ID), 1e18);
 
         uint256 maxBorrow = _maxBorrowBase(ink);
         uint256 borrow = maxBorrow - 1e18;
@@ -154,28 +154,28 @@ contract MentoCauldronValuationTest is Test, TestConstants {
         assertGt(cauldron.level(VAULT_ID), 0);
 
         _setMentoRate(_toMentoNumerator(rate200));
-        (uint256 value200, ) = mentoOracle.get(bytes32(USDT_ID), bytes32(CKES_ID), 1e18);
+        (uint256 value200, ) = mentoOracle.get(bytes32(USDT_ID), bytes32(KESM_ID), 1e18);
 
         uint256 expectedRatio = value150 * rate150 / rate200;
-        assertApproxEqRel(value200, expectedRatio, 1e14, "cKES/USD should drop with USD/KES up");
+        assertApproxEqRel(value200, expectedRatio, 1e14, "KESm/USD should drop with USD/KES up");
 
         assertLt(cauldron.level(VAULT_ID), 0);
 
         uint256 invertedRate = INVERSION_SCALE / _toMentoNumerator(rate200);
         uint256 expectedLiq = uint256(ink).wmul(invertedRate);
 
-        (IOracle oracle, ) = cauldron.spotOracles(CKES_ID, USDT_ID);
+        (IOracle oracle, ) = cauldron.spotOracles(KESM_ID, USDT_ID);
         (uint256 liqValue, ) = ILiquidationOracle(address(oracle)).getLiquidation(
             bytes32(USDT_ID),
-            bytes32(CKES_ID),
+            bytes32(KESM_ID),
             ink
         );
         assertEq(liqValue, expectedLiq, "Liquidation value should cap USDT premium");
     }
 
     function _maxBorrowBase(uint128 ink) internal returns (uint256 maxBase) {
-        (IOracle oracle, uint32 ratio) = cauldron.spotOracles(CKES_ID, USDT_ID);
-        (uint256 inkValue, ) = oracle.get(USDT_ID, CKES_ID, ink);
+        (IOracle oracle, uint32 ratio) = cauldron.spotOracles(KESM_ID, USDT_ID);
+        (uint256 inkValue, ) = oracle.get(USDT_ID, KESM_ID, ink);
         uint256 ratioNormalized = uint256(ratio) * 1e12;
         maxBase = inkValue.wdiv(ratioNormalized);
     }

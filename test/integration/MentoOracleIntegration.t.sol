@@ -174,10 +174,10 @@ contract MentoOracleIntegrationTest is Test, TestConstants {
     ChainlinkAggregatorV3MockFull public usdtUsdAggregator;
     uint80 private usdtRoundId;
 
-    ERC20Mock public ckes;
+    ERC20Mock public kesm;
     ERC20Mock public usdt;
 
-    bytes6 public constant CKES_ID = 0x634B45530000; // "cKES"
+    bytes6 public constant KESM_ID = 0x634B45530000; // "KESm"
     bytes6 public constant USDT_ID = 0x555344540000; // "USDT"
     address public constant KES_USD_FEED = address(0xBEEF);
     bytes12 public constant VAULT_ID = 0x000000000000000000000111;
@@ -188,7 +188,7 @@ contract MentoOracleIntegrationTest is Test, TestConstants {
     function setUp() public {
         vm.warp(1_000_001);
 
-        ckes = new ERC20Mock("cKES", "cKES");
+        kesm = new ERC20Mock("KESm", "KESm");
         usdt = new ERC20Mock("USDT", "USDT");
 
         VRCauldron impl = new VRCauldron();
@@ -208,25 +208,25 @@ contract MentoOracleIntegrationTest is Test, TestConstants {
 
         rateOracle = new AccumulatorMultiOracle();
         rateOracle.grantRole(AccumulatorMultiOracle.setSource.selector, address(this));
-        rateOracle.setSource(CKES_ID, RATE, WAD, WAD);
+        rateOracle.setSource(KESM_ID, RATE, WAD, WAD);
 
-        cauldron.addAsset(CKES_ID, address(ckes));
+        cauldron.addAsset(KESM_ID, address(kesm));
         cauldron.addAsset(USDT_ID, address(usdt));
-        cauldron.setRateOracle(CKES_ID, IOracle(address(rateOracle)));
-        cauldron.addBase(CKES_ID);
+        cauldron.setRateOracle(KESM_ID, IOracle(address(rateOracle)));
+        cauldron.addBase(KESM_ID);
 
         mentoOracle.grantRole(MentoSpotOracle.addSource.selector, address(this));
         mentoOracle.grantRole(MentoSpotOracle.setBounds.selector, address(this));
-        mentoOracle.addSource(USDT_ID, CKES_ID, KES_USD_FEED, MAX_AGE, 0);
+        mentoOracle.addSource(USDT_ID, KESM_ID, KES_USD_FEED, MAX_AGE, 0);
         _setUsdtUsdSpot(100_000_000);
         _setMentoRateFromInvertedRate(100e18);
-        cauldron.setSpotOracle(CKES_ID, USDT_ID, IOracle(address(mentoOracle)), COLLATERAL_RATIO);
+        cauldron.setSpotOracle(KESM_ID, USDT_ID, IOracle(address(mentoOracle)), COLLATERAL_RATIO);
         bytes6[] memory ilks = new bytes6[](1);
         ilks[0] = USDT_ID;
-        cauldron.addIlks(CKES_ID, ilks);
-        cauldron.setDebtLimits(CKES_ID, USDT_ID, 1_000_000, 0, 18);
+        cauldron.addIlks(KESM_ID, ilks);
+        cauldron.setDebtLimits(KESM_ID, USDT_ID, 1_000_000, 0, 18);
 
-        cauldron.build(address(this), VAULT_ID, CKES_ID, USDT_ID);
+        cauldron.build(address(this), VAULT_ID, KESM_ID, USDT_ID);
 
     }
 
@@ -273,9 +273,9 @@ contract MentoOracleIntegrationTest is Test, TestConstants {
     }
 
     function testWrongInversionBoundsRevert() public {
-        mentoOracle.setBounds(USDT_ID, CKES_ID, 0.005e18, 0.015e18);
+        mentoOracle.setBounds(USDT_ID, KESM_ID, 0.005e18, 0.015e18);
         vm.expectRevert("Price above maximum");
-        mentoOracle.get(bytes32(USDT_ID), bytes32(CKES_ID), 1e18);
+        mentoOracle.get(bytes32(USDT_ID), bytes32(KESM_ID), 1e18);
     }
 
     function testDecimalsMatrix() public {
@@ -294,7 +294,7 @@ contract MentoOracleIntegrationTest is Test, TestConstants {
                 AggregatorV3Interface(address(feed))
             );
             oracle.grantRole(MentoSpotOracle.addSource.selector, address(this));
-            oracle.addSource(USDT_ID, CKES_ID, KES_USD_FEED, MAX_AGE, 0);
+            oracle.addSource(USDT_ID, KESM_ID, KES_USD_FEED, MAX_AGE, 0);
 
             uint256 answer = feedDec == 8 ? 100_000_000 : 1e18;
             feed.setRoundData(1, int256(answer), block.timestamp, 1);
@@ -303,7 +303,7 @@ contract MentoOracleIntegrationTest is Test, TestConstants {
             uint256 usdtUsd = feedDec == 8 ? answer * 1e10 : answer;
             uint256 expected = amount.wmul(100e18).wmul(usdtUsd);
 
-            (uint256 value, ) = oracle.get(bytes32(USDT_ID), bytes32(CKES_ID), amount);
+            (uint256 value, ) = oracle.get(bytes32(USDT_ID), bytes32(KESM_ID), amount);
             assertEq(value, expected);
         }
     }
@@ -340,10 +340,10 @@ contract MentoOracleIntegrationTest is Test, TestConstants {
             AggregatorV3Interface(address(feed))
         );
         oracle.grantRole(MentoSpotOracle.addSource.selector, address(this));
-        oracle.addSource(USDT_ID, CKES_ID, KES_USD_FEED, MAX_AGE, 0);
+        oracle.addSource(USDT_ID, KESM_ID, KES_USD_FEED, MAX_AGE, 0);
 
         vm.expectRevert("USDT/USD invalid");
-        cauldron.setSpotOracle(CKES_ID, USDT_ID, IOracle(address(oracle)), COLLATERAL_RATIO);
+        cauldron.setSpotOracle(KESM_ID, USDT_ID, IOracle(address(oracle)), COLLATERAL_RATIO);
     }
 
     function testDecimalsHighCausesRiskOff() public {
@@ -354,28 +354,28 @@ contract MentoOracleIntegrationTest is Test, TestConstants {
             AggregatorV3Interface(address(feed))
         );
         oracle.grantRole(MentoSpotOracle.addSource.selector, address(this));
-        oracle.addSource(USDT_ID, CKES_ID, KES_USD_FEED, MAX_AGE, 0);
+        oracle.addSource(USDT_ID, KESM_ID, KES_USD_FEED, MAX_AGE, 0);
 
         vm.expectRevert("USDT/USD invalid");
-        cauldron.setSpotOracle(CKES_ID, USDT_ID, IOracle(address(oracle)), COLLATERAL_RATIO);
+        cauldron.setSpotOracle(KESM_ID, USDT_ID, IOracle(address(oracle)), COLLATERAL_RATIO);
     }
 
     function testPremiumCapBoundaries() public {
         uint256 amount = 10e18;
 
         _setUsdtUsdSpot(99_999_999);
-        (uint256 mintUnder, ) = mentoOracle.get(bytes32(USDT_ID), bytes32(CKES_ID), amount);
-        (uint256 liqUnder, ) = mentoOracle.getLiquidation(bytes32(USDT_ID), bytes32(CKES_ID), amount);
+        (uint256 mintUnder, ) = mentoOracle.get(bytes32(USDT_ID), bytes32(KESM_ID), amount);
+        (uint256 liqUnder, ) = mentoOracle.getLiquidation(bytes32(USDT_ID), bytes32(KESM_ID), amount);
         assertEq(mintUnder, liqUnder);
 
         _setUsdtUsdSpot(100_000_000);
-        (uint256 mintAt, ) = mentoOracle.get(bytes32(USDT_ID), bytes32(CKES_ID), amount);
-        (uint256 liqAt, ) = mentoOracle.getLiquidation(bytes32(USDT_ID), bytes32(CKES_ID), amount);
+        (uint256 mintAt, ) = mentoOracle.get(bytes32(USDT_ID), bytes32(KESM_ID), amount);
+        (uint256 liqAt, ) = mentoOracle.getLiquidation(bytes32(USDT_ID), bytes32(KESM_ID), amount);
         assertEq(mintAt, liqAt);
 
         _setUsdtUsdSpot(100_000_001);
-        (uint256 mintOver, ) = mentoOracle.get(bytes32(USDT_ID), bytes32(CKES_ID), amount);
-        (uint256 liqOver, ) = mentoOracle.getLiquidation(bytes32(USDT_ID), bytes32(CKES_ID), amount);
+        (uint256 mintOver, ) = mentoOracle.get(bytes32(USDT_ID), bytes32(KESM_ID), amount);
+        (uint256 liqOver, ) = mentoOracle.getLiquidation(bytes32(USDT_ID), bytes32(KESM_ID), amount);
         assertGt(mintOver, liqOver);
 
         uint256 expectedLiq = amount.wmul(100e18);
@@ -390,10 +390,10 @@ contract MentoOracleIntegrationTest is Test, TestConstants {
             AggregatorV3Interface(address(feed))
         );
         oracle.grantRole(MentoSpotOracle.addSource.selector, address(this));
-        oracle.addSource(USDT_ID, CKES_ID, KES_USD_FEED, MAX_AGE, 0);
+        oracle.addSource(USDT_ID, KESM_ID, KES_USD_FEED, MAX_AGE, 0);
 
         vm.expectRevert("USDT/USD invalid");
-        cauldron.setSpotOracle(CKES_ID, USDT_ID, IOracle(address(oracle)), COLLATERAL_RATIO);
+        cauldron.setSpotOracle(KESM_ID, USDT_ID, IOracle(address(oracle)), COLLATERAL_RATIO);
     }
 
     function _setUsdtUsdSpot(uint256 price1e8) internal {
@@ -424,7 +424,7 @@ contract MentoOracleIntegrationTest is Test, TestConstants {
     }
 
     function _buildVault(bytes12 vaultId) internal {
-        cauldron.build(address(this), vaultId, CKES_ID, USDT_ID);
+        cauldron.build(address(this), vaultId, KESM_ID, USDT_ID);
     }
 
     function _expectRiskOffRevert() internal {

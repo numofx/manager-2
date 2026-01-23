@@ -104,7 +104,7 @@ contract VerifyMentoFeedDirection {
             _log("this is a fractional dollar amount per KES.");
             _log("");
             _log("For Yield Protocol:");
-            _log("  -> Oracle MUST INVERT: cKES_per_USD = 1e42 / mentoRate");
+            _log("  -> Oracle MUST INVERT: KESm_per_USD = 1e42 / mentoRate");
             _log("  -> Sanity bounds MUST BE INVERTED too");
         } else if (rate > 1e26) {
             // Large number -> likely KES per USD (hundreds range)
