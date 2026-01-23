@@ -301,7 +301,7 @@ abstract contract Fixture is Test, TestConstants, TestExtensions {
         cauldron.setSpotOracle(
             assetId,
             assetId,
-            IOracle(chirateoracle),
+            IOracle(address(spotOracle)),
             1000000
         );
         bytes6[] memory ilk = new bytes6[](1);
