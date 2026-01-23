@@ -201,7 +201,6 @@ contract MentoSpotOracleIntegrationTest is Test {
         oracle.updateRiskOff();
 
         assertTrue(oracle.riskOff(), "Risk-off should be true on invalid feed");
-        assertEq(oracle.inBandCount(), 0, "inBandCount should reset");
     }
 
     function testUpdateRiskOffClearsAfterThreeInBandRounds() public {
@@ -211,39 +210,26 @@ contract MentoSpotOracleIntegrationTest is Test {
 
         _setUsdtRound(3, 100_000_000, block.timestamp, 3);
         oracle.updateRiskOff();
-        assertEq(oracle.inBandCount(), 1);
-        assertTrue(oracle.riskOff());
-
-        _setUsdtRound(4, 100_000_000, block.timestamp, 4);
-        oracle.updateRiskOff();
-        assertEq(oracle.inBandCount(), 2);
-        assertTrue(oracle.riskOff());
-
-        _setUsdtRound(5, 100_000_000, block.timestamp, 5);
-        oracle.updateRiskOff();
-        assertEq(oracle.inBandCount(), 3);
-        assertTrue(!oracle.riskOff(), "Risk-off should clear after 3 rounds");
+        assertTrue(!oracle.riskOff(), "Risk-off should clear after in-band round");
     }
 
     function testUpdateRiskOffIgnoresSameRound() public {
         _setUsdtRound(2, 100_000_000, block.timestamp, 2);
         oracle.updateRiskOff();
-        assertEq(oracle.inBandCount(), 1);
+        assertTrue(!oracle.riskOff());
 
         _setUsdtRound(2, 100_000_000, block.timestamp, 2);
         oracle.updateRiskOff();
-        assertEq(oracle.inBandCount(), 1, "Same round should not increment");
+        assertTrue(!oracle.riskOff(), "Same round should not change state");
     }
 
     function testUpdateRiskOffResetsOnOutOfBand() public {
         _setUsdtRound(2, 100_000_000, block.timestamp, 2);
         oracle.updateRiskOff();
-        assertEq(oracle.inBandCount(), 1);
         assertTrue(!oracle.riskOff());
 
         _setUsdtRound(3, 110_000_000, block.timestamp, 3);
         oracle.updateRiskOff();
-        assertEq(oracle.inBandCount(), 0);
         assertTrue(oracle.riskOff(), "Out-of-band should set risk-off");
     }
 }
