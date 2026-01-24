@@ -35,6 +35,18 @@ forge script script/DeployMinimalCeloSystem.s.sol:DeployMinimalCeloSystem \
  `0xb493ee06ee728f468b1d74fb2b335e42bb1b3e27
  (its asset() returns 0x48065fbBE25f71C9282ddf5e1cD6D6A887483D5e, the USDT token)`
 
+## Verified addresses (Celo mainnet)
+
+USDT
+- assetId (bytes6): `0x555344540000`
+- token: `0x48065fbBE25f71C9282ddf5e1cD6D6A887483D5e`
+- join: `0xB493EE06Ee728F468B1d74fB2B335E42BB1B3E27`
+
+Invariants:
+- Cauldron.assets(USDT_ID) == USDT token
+- Ladle.joins(USDT_ID) == USDT Join
+- USDT Join.asset() == USDT token
+
  ## Test workflow
 
 This repo separates **unit tests** from **mainnet fork tests**.

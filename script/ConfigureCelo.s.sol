@@ -50,6 +50,7 @@ contract ConfigureCelo is Script {
     uint256 constant KESM_MIN_PRICE = 0.005e18;   // $0.005 per KESm
     uint256 constant KESM_MAX_PRICE = 0.015e18;   // $0.015 per KESm
     uint256 constant KESM_MAX_AGE = 1 hours;      // Maximum price staleness
+    uint256 constant KESM_MIN_NUM_RATES = 3;      // Require at least 3 oracle reports
 
     // Collateralization ratios (basis points out of 1,000,000)
     // Example: 150% = 1,500,000 (need $1.50 collateral per $1 borrowed)
@@ -188,16 +189,27 @@ contract ConfigureCelo is Script {
         // ============================================================
         console.log("5. Configuring Mento Oracle...");
 
-        // Set USDT->KESm price source from Mento (maxAge is set here)
+        // Set or update USDT->KESm price source from Mento (maxAge is set here)
         console.log("   Setting USDT->KESm source (Mento KES/USD feed)...");
-        mentoOracle.addSource(
-            USDT_ID,  // Using USDT as USD proxy
-            KESM_ID,
-            MENTO_KES_USD_FEED,
-            KESM_MAX_AGE, // Max age: 1 hour
-            0             // minNumRates (0 = no minimum enforced)
-        );
-        console.log("   [OK] Set USDT->KESm source with staleness check (max age: 1 hour)");
+        (address rateFeedID,,,,) = mentoOracle.sources(USDT_ID, KESM_ID);
+        if (rateFeedID == address(0)) {
+            mentoOracle.addSource(
+                USDT_ID,  // Using USDT as USD proxy
+                KESM_ID,
+                MENTO_KES_USD_FEED,
+                KESM_MAX_AGE,       // Max age
+                KESM_MIN_NUM_RATES  // Minimum required reports
+            );
+        } else {
+            mentoOracle.setSource(
+                USDT_ID,  // Using USDT as USD proxy
+                KESM_ID,
+                MENTO_KES_USD_FEED,
+                KESM_MAX_AGE,       // Max age
+                KESM_MIN_NUM_RATES  // Minimum required reports
+            );
+        }
+        console.log("   [OK] Set USDT->KESm source with staleness check and min reports");
 
         // Set sanity bounds for KESm/USD
         console.log("   Setting USDT->KESm sanity bounds ($0.005 - $0.015)...");
