@@ -35,3 +35,4 @@ cache/
 broadcast/
 cache/solidity-files-cache.json
 ladle.bin
+*.bin
