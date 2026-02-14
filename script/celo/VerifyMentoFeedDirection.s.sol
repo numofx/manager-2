@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 pragma solidity >=0.8.13;
 
-import "../src/oracles/mento/ISortedOracles.sol";
+import "../../src/oracles/mento/ISortedOracles.sol";
 
 /**
  * @title VerifyMentoFeedDirection
@@ -9,7 +9,7 @@ import "../src/oracles/mento/ISortedOracles.sol";
  * @dev NO BROADCAST - This script only reads chain state
  *
  * Usage:
- *   forge script script/VerifyMentoFeedDirection.s.sol:VerifyMentoFeedDirection \
+ *   forge script script/celo/VerifyMentoFeedDirection.s.sol:VerifyMentoFeedDirection \
  *     --rpc-url $CELO_RPC
  *
  * Environment Variables (optional):

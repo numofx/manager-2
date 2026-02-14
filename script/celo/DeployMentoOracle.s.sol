@@ -2,9 +2,9 @@
 pragma solidity ^0.8.13;
 
 import "forge-std/Script.sol";
-import "../src/oracles/mento/MentoSpotOracle.sol";
-import "../src/oracles/mento/ISortedOracles.sol";
-import "../src/oracles/chainlink/AggregatorV3Interface.sol";
+import "../../src/oracles/mento/MentoSpotOracle.sol";
+import "../../src/oracles/mento/ISortedOracles.sol";
+import "../../src/oracles/chainlink/AggregatorV3Interface.sol";
 
 contract DeployMentoOracle is Script {
     function run() external returns (MentoSpotOracle oracle) {

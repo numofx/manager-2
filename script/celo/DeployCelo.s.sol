@@ -2,15 +2,15 @@
 pragma solidity >=0.8.13;
 
 import "forge-std/Script.sol";
-import "../src/Cauldron.sol";
-import "../src/Ladle.sol";
-import "../src/Join.sol";
-import "../src/Witch.sol";
-import "../src/FYToken.sol";
-import "../src/oracles/mento/MentoSpotOracle.sol";
-import "../src/oracles/mento/ISortedOracles.sol";
-import "../src/oracles/chainlink/AggregatorV3Interface.sol";
-import "../src/oracles/chainlink/ChainlinkMultiOracle.sol";
+import "../../src/Cauldron.sol";
+import "../../src/Ladle.sol";
+import "../../src/Join.sol";
+import "../../src/Witch.sol";
+import "../../src/FYToken.sol";
+import "../../src/oracles/mento/MentoSpotOracle.sol";
+import "../../src/oracles/mento/ISortedOracles.sol";
+import "../../src/oracles/chainlink/AggregatorV3Interface.sol";
+import "../../src/oracles/chainlink/ChainlinkMultiOracle.sol";
 import "@yield-protocol/utils-v2/src/interfaces/IWETH9.sol";
 import "@yield-protocol/utils-v2/src/token/IERC20Metadata.sol";
 
@@ -24,7 +24,7 @@ import "@yield-protocol/utils-v2/src/token/IERC20Metadata.sol";
  * - CELO_RPC: Celo RPC endpoint
  *
  * Usage:
- * forge script script/DeployCelo.s.sol:DeployCelo --rpc-url $CELO_RPC --broadcast --verify --slow
+ * forge script script/celo/DeployCelo.s.sol:DeployCelo --rpc-url $CELO_RPC --broadcast --verify --slow
  */
 contract DeployCelo is Script {
     // Celo mainnet addresses
@@ -156,7 +156,7 @@ contract DeployCelo is Script {
         console.log("NEXT STEPS:");
         console.log("========================================");
         console.log("1. Run the configuration script:");
-        console.log("   forge script script/ConfigureCelo.s.sol:ConfigureCelo --rpc-url $CELO_RPC --broadcast");
+        console.log("   forge script script/celo/ConfigureCelo.s.sol:ConfigureCelo --rpc-url $CELO_RPC --broadcast");
         console.log("");
         console.log("2. Configure Chainlink oracle price feeds");
         console.log("3. Set collateralization ratios");

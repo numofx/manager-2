@@ -2,14 +2,14 @@
 pragma solidity >=0.8.13;
 
 import "forge-std/Script.sol";
-import "../src/Cauldron.sol";
-import "../src/Ladle.sol";
-import "../src/Join.sol";
-import "../src/Witch.sol";
-import "../src/FYToken.sol";
-import "../src/oracles/mento/MentoSpotOracle.sol";
-import "../src/oracles/mento/ISortedOracles.sol";
-import "../src/oracles/chainlink/AggregatorV3Interface.sol";
+import "../../src/Cauldron.sol";
+import "../../src/Ladle.sol";
+import "../../src/Join.sol";
+import "../../src/Witch.sol";
+import "../../src/FYToken.sol";
+import "../../src/oracles/mento/MentoSpotOracle.sol";
+import "../../src/oracles/mento/ISortedOracles.sol";
+import "../../src/oracles/chainlink/AggregatorV3Interface.sol";
 import "@yield-protocol/utils-v2/src/interfaces/IWETH9.sol";
 
 /**
@@ -21,7 +21,7 @@ import "@yield-protocol/utils-v2/src/interfaces/IWETH9.sol";
  *      - Oracle: Mento SortedOracles (returns KESm per USDT, 1e18)
  *
  * Usage (Celo Mainnet):
- *   forge script script/DeployMinimalCeloSystem.s.sol:DeployMinimalCeloSystem \
+ *   forge script script/celo/DeployMinimalCeloSystem.s.sol:DeployMinimalCeloSystem \
  *     --rpc-url $CELO_RPC \
  *     --private-key $PRIVATE_KEY \
  *     --broadcast \
@@ -29,7 +29,7 @@ import "@yield-protocol/utils-v2/src/interfaces/IWETH9.sol";
  *     --slow
  *
  * Usage (Alfajores Testnet - RECOMMENDED FIRST):
- *   forge script script/DeployMinimalCeloSystem.s.sol:DeployMinimalCeloSystem \
+ *   forge script script/celo/DeployMinimalCeloSystem.s.sol:DeployMinimalCeloSystem \
  *     --rpc-url https://alfajores-forno.celo-testnet.org \
  *     --private-key $PRIVATE_KEY \
  *     --broadcast \

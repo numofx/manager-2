@@ -2,12 +2,12 @@
 pragma solidity >=0.8.13;
 
 import "forge-std/Script.sol";
-import "../src/Cauldron.sol";
-import "../src/Ladle.sol";
-import "../src/Join.sol";
-import "../src/Witch.sol";
-import "../src/oracles/mento/MentoSpotOracle.sol";
-import "../src/oracles/chainlink/ChainlinkMultiOracle.sol";
+import "../../src/Cauldron.sol";
+import "../../src/Ladle.sol";
+import "../../src/Join.sol";
+import "../../src/Witch.sol";
+import "../../src/oracles/mento/MentoSpotOracle.sol";
+import "../../src/oracles/chainlink/ChainlinkMultiOracle.sol";
 import "@yield-protocol/utils-v2/src/token/IERC20Metadata.sol";
 
 /**
@@ -28,7 +28,7 @@ import "@yield-protocol/utils-v2/src/token/IERC20Metadata.sol";
  * - CELO_JOIN_ADDRESS: Deployed CELO Join address
  *
  * Usage:
- * forge script script/ConfigureCelo.s.sol:ConfigureCelo --rpc-url $CELO_RPC --broadcast
+ * forge script script/celo/ConfigureCelo.s.sol:ConfigureCelo --rpc-url $CELO_RPC --broadcast
  */
 contract ConfigureCelo is Script {
     // Asset addresses on Celo mainnet

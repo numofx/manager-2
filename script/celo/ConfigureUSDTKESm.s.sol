@@ -2,11 +2,11 @@
 pragma solidity >=0.8.13;
 
 import "forge-std/Script.sol";
-import "../src/Cauldron.sol";
-import "../src/Ladle.sol";
-import "../src/Witch.sol";
-import "../src/interfaces/IJoin.sol";
-import "../src/oracles/mento/MentoSpotOracle.sol";
+import "../../src/Cauldron.sol";
+import "../../src/Ladle.sol";
+import "../../src/Witch.sol";
+import "../../src/interfaces/IJoin.sol";
+import "../../src/oracles/mento/MentoSpotOracle.sol";
 
 /**
  * @title ConfigureUSDTKESm
@@ -23,7 +23,7 @@ import "../src/oracles/mento/MentoSpotOracle.sol";
  * - KESM_JOIN_ADDRESS: KESm Join address
  *
  * Usage:
- * forge script script/ConfigureUSDTKESm.s.sol:ConfigureUSDTKESm --rpc-url $CELO_RPC --broadcast
+ * forge script script/celo/ConfigureUSDTKESm.s.sol:ConfigureUSDTKESm --rpc-url $CELO_RPC --broadcast
  */
 contract ConfigureUSDTKESm is Script {
     // Asset address on Celo mainnet

@@ -2,9 +2,9 @@
 pragma solidity >=0.8.13;
 
 import "forge-std/Script.sol";
-import "../src/FYToken.sol";
-import "../src/interfaces/IJoin.sol";
-import "../src/interfaces/IOracle.sol";
+import "../../src/FYToken.sol";
+import "../../src/interfaces/IJoin.sol";
+import "../../src/interfaces/IOracle.sol";
 
 contract DeployFYKESm is Script {
     function run() external returns (FYToken fy) {
