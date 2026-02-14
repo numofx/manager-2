@@ -6,17 +6,24 @@ Manager-2 is a fork of [Vault v2](https://github.com/yieldprotocol/vault-v2), a 
 ```bash
 forge build
 forge test --match-path "**/MentoSpotOracleBasic.t.sol" -vv
-forge script script/DeployMinimalCeloSystem.s.sol:DeployMinimalCeloSystem \
+forge script script/celo/DeployMinimalCeloSystem.s.sol:DeployMinimalCeloSystem \
   --rpc-url https://alfajores-forno.celo-testnet.org \
   --private-key $PRIVATE_KEY \
   --broadcast --verify
 ```
 
 ## Deployment workflow
-1. `forge script script/DeployCelo.s.sol:DeployCelo --rpc-url $CELO_RPC --private-key $PRIVATE_KEY --broadcast` to deploy Cauldron/Ladle/Witch + joins and oracles.
-2. `forge script script/ConfigureCelo.s.sol:ConfigureCelo --rpc-url $CELO_RPC --private-key $PRIVATE_KEY --broadcast` to wire permissions, assets, oracle bounds, and debt limits.
-3. `forge script script/ConfigureUSDTKESm.s.sol:ConfigureUSDTKESm --rpc-url $CELO_RPC --private-key $PRIVATE_KEY --broadcast` to hook USDT/KESm-specific spot/debt settings.
-4. Deploy your FYToken series (`script/DeployFYKESm.s.sol`) and register them via `Cauldron.addSeries/addIlks/setDebtLimits`.
+1. `forge script script/celo/DeployCelo.s.sol:DeployCelo --rpc-url $CELO_RPC --private-key $PRIVATE_KEY --broadcast` to deploy Cauldron/Ladle/Witch + joins and oracles.
+2. `forge script script/celo/ConfigureCelo.s.sol:ConfigureCelo --rpc-url $CELO_RPC --private-key $PRIVATE_KEY --broadcast` to wire permissions, assets, oracle bounds, and debt limits.
+3. `forge script script/celo/ConfigureUSDTKESm.s.sol:ConfigureUSDTKESm --rpc-url $CELO_RPC --private-key $PRIVATE_KEY --broadcast` to hook USDT/KESm-specific spot/debt settings.
+4. Deploy your FYToken series (`script/celo/DeployFYKESm.s.sol`) and register them via `Cauldron.addSeries/addIlks/setDebtLimits`.
+
+## Base deployment (aUSDC/cNGN)
+1. Set Base addresses and market params in `.env` (see `.env.example`), especially:
+   - `LENDING_ORACLE_ADDRESS=0x2D99837907da95C156B441d2AB16cb06155B3eDd` (AccumulatorMultiOracle)
+   - `SPOT_ORACLE_ADDRESS=0xF6eEf10C55757dC36ec1E1662A6f1207Ce4A22a7` (ChainlinkUSDMultiOracleSpot)
+2. Run `just deploy-market base ausdc-cngn` to configure the market (ilk `aUSDC`, base `cNGN`).
+3. Run `just deploy-series base ausdc-cngn` to deploy/register the `fycNGN` series (default maturity in `script/base/DeployFYCNGNMay2026.s.sol`).
 
 ## Addresses (Celo)
 - KESm: `0x456a3D042C0DbD3db53D5489e98dFb038553B0d0`
