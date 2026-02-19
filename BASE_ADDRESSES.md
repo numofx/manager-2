@@ -19,10 +19,12 @@
 ### Assets
 - aUSDC: `0x4e65fE4DbA92790696d040ac24Aa414708F5c0AB`
 - cNGN: `0x46C85152bFe9f96829aA94755D9f915F9B10EF5F`
+- USDC: `0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913`
 
 ### Asset IDs (bytes6)
 - AUSDC_ID: `0x615553444300`
 - CNGN_ID: `0x634e474e0000`
+- USDC_ID: `0x555344430000`
 - RATE_ID: `0x524154450000`
 
 ### Deployment Tx Hashes
@@ -60,3 +62,36 @@
 - Grant FYToken `burn` role to Ladle: `0xdc51cc5549f8bc098ae411c60ef2a1f23298f04c02cb92452a491c152c9959a8`
 - Add series in Cauldron: `0xedcd3356b5dae236ba98805d6dd7717c199305a967a3df047db0497bac0209bc`
 - Add ilk (aUSDC) to series: `0xe0f362da50985628833a17565f38e6f6078157243b4c55a28952f5f8d05d1e20`
+
+## Base Mainnet Updates (USDC market + fyUSDC)
+
+### Joins
+- USDC Join: `0xEDA153C08E30c5AD779cC7A3e437131dF12CC489`
+
+### Oracle Source Updates
+- Set spot source (USDC -> USDC/USD feed `0x7e860098F58bBFC8648a4311b374B1D669a2bc6B`): `0xe0a572eeb94c1d5e4ccf05000a71e88a7755131bbefdf89fa22ff1dddaec1a40`
+- Set lending source (USDC, RATE, start=1e18, perSecond=1e18): `0xa1c4cbaecb453c4d42dac5dac91d7bc0550f528b84c1ad3189f6b4e5bf63bf65`
+
+### USDC Join Tx Hash
+- Deploy USDC Join: `0x63151210f5116cf278c880c668553bfbb203ca4a6b59c92ef44aa39568267850`
+
+### Market Wiring Tx Hashes (USDC base, aUSDC collateral)
+- Configure market script first tx: `0x398a316e069134cf18a105611a5e3ea29bc689ab7800e9ea60dc140ce1ca6cc8`
+- Configure market script last tx: `0xcb5ca2f387e21416312871f829beafed25ca53e4b3679813ed842dff3063a22b`
+- Update debt limits for USDC/aUSDC (min=1, dec=6): `0x0e9b2a9c6bf4001279b0cf10d2e92dc30e61873214decc5e011f8ed373c55466`
+
+### FY Series (USDC May 2026)
+- FYToken: `0x1829A5128c553f902D6fe1102a790d4f6EdDfbAC`
+- SERIES_ID: `0x465955534443` (`"FYUSDC"`)
+- MATURITY: `1778112000` (May 7, 2026 00:00:00 UTC)
+
+### FY Series Tx Hashes (USDC)
+- Deploy FYToken: `0x2eac213f1c45c2e901a3ade3979698ed3063af23eda6eda253cc0cf63de1e5b4`
+- Grant FYToken `mint` role to Ladle: `0x6e3243c8663ed50c5ec4b47c9dc3db7a7a6187a2f1ba2e2ec8c0d919541937ed`
+- Grant FYToken `burn` role to Ladle: `0xe96d7881e798143744f3a2ebaf73e8647c02e2134bdc694975a5a503763b0b1f`
+- Add series in Cauldron: `0x5c0775b4c13448ec22a14ca58fe66a3c76adff1507a05f7ae57b051df1ea35ca`
+- Add ilk (aUSDC) to series: `0x2937811e972d063c680e2115a5b914bc998a7100139be304b79d6bb046540133`
+
+### First Mint (USDC market)
+- Approve aUSDC to aUSDC Join: `0x40a2a5a905a759a010037d630e52d459df03c75150ee13e10e5610e64a90b120`
+- Build + Pour batch (ink=2.5 aUSDC, art=1.0 fyUSDC): `0x9a817ea19e5fb093b81a964989fd6d90ff946cd82b3120ca2f74449c46e9a902`

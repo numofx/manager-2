@@ -44,6 +44,7 @@ deploy-core chain flags="":
 # - celo usdt-kesm (or usdtkesm)
 # - celo full (full ConfigureCelo flow)
 # - base ausdc-cngn (or ausdccngn)
+# - base ausdc-usdc (or ausdcusdc)
 # Example: just deploy-market base ausdc-cngn
 deploy-market chain asset flags="":
   case "{{chain}}:{{asset}}" in \
@@ -56,6 +57,9 @@ deploy-market chain asset flags="":
     base:ausdc-cngn|base:ausdccngn) \
       : "${BASE_RPC:?BASE_RPC is required}"; \
       forge script script/base/ConfigureAUSDCCNGN.s.sol:ConfigureAUSDCCNGN --rpc-url "$BASE_RPC" --broadcast {{flags}} ;; \
+    base:ausdc-usdc|base:ausdcusdc) \
+      : "${BASE_RPC:?BASE_RPC is required}"; \
+      forge script script/base/ConfigureAUSDCUSDC.s.sol:ConfigureAUSDCUSDC --rpc-url "$BASE_RPC" --broadcast {{flags}} ;; \
     *) echo "Unsupported chain/asset '{{chain}}:{{asset}}'"; exit 1 ;; \
   esac
 
@@ -63,6 +67,7 @@ deploy-market chain asset flags="":
 # Supported markets:
 # - celo usdt-kesm (or usdtkesm)
 # - base ausdc-cngn (or ausdccngn)
+# - base ausdc-usdc (or ausdcusdc)
 # Example: just deploy-series base ausdc-cngn
 deploy-series chain asset flags="":
   case "{{chain}}:{{asset}}" in \
@@ -72,6 +77,9 @@ deploy-series chain asset flags="":
     base:ausdc-cngn|base:ausdccngn) \
       : "${BASE_RPC:?BASE_RPC is required}"; \
       forge script script/base/DeployFYCNGNMay2026.s.sol:DeployFYCNGNMay2026 --rpc-url "$BASE_RPC" --broadcast {{flags}} ;; \
+    base:ausdc-usdc|base:ausdcusdc) \
+      : "${BASE_RPC:?BASE_RPC is required}"; \
+      forge script script/base/DeployFYUSDCMay2026.s.sol:DeployFYUSDCMay2026 --rpc-url "$BASE_RPC" --broadcast {{flags}} ;; \
     *) echo "Unsupported chain/asset '{{chain}}:{{asset}}'"; exit 1 ;; \
   esac
 

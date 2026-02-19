@@ -25,6 +25,15 @@ forge script script/celo/DeployMinimalCeloSystem.s.sol:DeployMinimalCeloSystem \
 2. Run `just deploy-market base ausdc-cngn` to configure the market (ilk `aUSDC`, base `cNGN`).
 3. Run `just deploy-series base ausdc-cngn` to deploy/register the `fycNGN` series (default maturity in `script/base/DeployFYCNGNMay2026.s.sol`).
 
+## Base deployment (aUSDC/USDC)
+1. Ensure `.env` contains `USDC_ADDRESS` and `USDC_JOIN_ADDRESS`, plus standard core addresses.
+2. Ensure `SPOT_ORACLE_ADDRESS` has both source feeds configured:
+   - `aUSDC -> USDC/USD` feed
+   - `USDC -> USDC/USD` feed
+3. Run `just deploy-market base ausdc-usdc` to configure market wiring (ilk `aUSDC`, base `USDC`).
+4. Run `just deploy-series base ausdc-usdc` to deploy/register `fyUSDC` (default maturity in `script/base/DeployFYUSDCMay2026.s.sol`).
+   - This script defaults `SERIES_ID` to `"FYUSDC"` to avoid collision with the maturity-derived `fycNGN` series ID.
+
 ## Addresses (Celo)
 - KESm: `0x456a3D042C0DbD3db53D5489e98dFb038553B0d0`
 - USDT: `0x48065fbBE25f71C9282ddf5e1cD6D6A887483D5e`
